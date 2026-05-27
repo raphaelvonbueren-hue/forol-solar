@@ -855,3 +855,240 @@ input:focus, select:focus { outline: none; border-color: var(--forol-red); }
   .apt-thumb { width: 60px; }
   .apt-card { font-size: 12px; }
 }
+
+/* ===== SUNBAR (Vertriebs-Modus, oben mittig) ===== */
+.sunbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  z-index: 10;
+  min-width: 480px;
+  max-width: calc(100% - 32px);
+}
+.sunbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sunbar-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.sunbar-time-left, .sunbar-time-right {
+  font-size: 10px;
+  color: var(--gray);
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+}
+.sunbar-time-right { text-align: right; }
+.sunbar-slider {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: linear-gradient(to right,
+    #1A1A4A 0%,
+    #6B8FBC 18%,
+    #F5A623 35%,
+    #FFE08A 50%,
+    #F5A623 65%,
+    #6B8FBC 82%,
+    #1A1A4A 100%);
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+.sunbar-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid var(--forol-red);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.sunbar-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2px solid var(--forol-red);
+  cursor: pointer;
+}
+.sunbar-label {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+}
+.sunbar-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.sunbar-tz {
+  font-size: 10px;
+  color: var(--gray);
+  font-weight: 500;
+}
+
+@media (max-width: 1000px) {
+  .sunbar { min-width: 0; width: calc(100% - 96px); top: 8px; padding: 6px 10px; }
+}
+
+/* ===== CONTACT BUTTON & MODAL ===== */
+.contact-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--forol-red);
+  color: white;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.20);
+  z-index: 15;
+  font-family: inherit;
+  transition: transform 0.15s, background 0.15s;
+}
+.contact-btn:hover {
+  background: var(--dark);
+  transform: scale(1.08);
+}
+.contact-btn:active { transform: scale(0.96); }
+
+.contact-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+.contact-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--white);
+  border-radius: 8px;
+  width: 92%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 101;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.3);
+}
+.contact-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+.contact-modal-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.contact-modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--gray);
+  padding: 4px 8px;
+  font-family: inherit;
+}
+.contact-modal-close:hover { color: var(--forol-red); }
+
+.contact-form {
+  padding: 16px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.contact-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--gray);
+}
+.contact-form label span {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.contact-form input, .contact-form textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--dark);
+  background: var(--white);
+}
+.contact-form input:focus, .contact-form textarea:focus {
+  outline: none;
+  border-color: var(--forol-red);
+}
+.contact-form textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+.btn-submit {
+  background: var(--forol-red);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 4px;
+}
+.btn-submit:hover { background: var(--dark); }
+.contact-hint {
+  font-size: 10px;
+  color: var(--gray-light);
+  text-align: center;
+  margin-top: 2px;
+}
+.contact-summary {
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+.contact-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 2px 0;
+}
+.contact-summary-lbl { color: var(--gray); }
+.contact-summary-val {
+  font-weight: 600;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Im Sales-Modus die alte overlay-info verstecken (SunBar ersetzt sie) */
+.main:has(.sales-sidebar) .overlay-info {
+  display: none;
+}

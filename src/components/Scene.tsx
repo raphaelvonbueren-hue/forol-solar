@@ -56,6 +56,15 @@ export function Scene() {
   const samplesRef = useRef<FacadeSample[] | null>(null);
   const resultsRef = useRef<Float32Array | null>(null);
   const frameRef = useRef<number | null>(null);
+  // Kamera-Animation (für Fly-to bei Wohnungs-Selektion)
+  const cameraAnimRef = useRef<{
+    fromPos: THREE.Vector3;
+    toPos: THREE.Vector3;
+    fromTarget: THREE.Vector3;
+    toTarget: THREE.Vector3;
+    startTime: number;
+    duration: number;
+  } | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
   const [infoOverlay, setInfoOverlay] = useState<InfoOverlayState | null>(null);
@@ -160,6 +169,18 @@ export function Scene() {
     window.addEventListener('resize', resize);
 
     function loop() {
+      // Kamera-Animation, falls aktiv
+      if (cameraAnimRef.current) {
+        const a = cameraAnimRef.current;
+        const t = Math.min(1, (performance.now() - a.startTime) / a.duration);
+        // ease-in-out cubic
+        const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        camera.position.lerpVectors(a.fromPos, a.toPos, e);
+        controls.target.lerpVectors(a.fromTarget, a.toTarget, e);
+        if (t >= 1) {
+          cameraAnimRef.current = null;
+        }
+      }
       controls.update();
       renderer.render(scene, camera);
       frameRef.current = requestAnimationFrame(loop);
@@ -264,10 +285,53 @@ export function Scene() {
     return () => { cancelled = true; };
   }, [neighborGLBFile]);
 
-  // Subzone-Visualisierung — Wohnungs-Quader mit Status- und Selektions-Highlight
   const selectedApartmentId = useProjectStore((s) => s.selectedApartmentId);
   const hoveredApartmentId = useProjectStore((s) => s.hoveredApartmentId);
   const uiMode = useProjectStore((s) => s.uiMode);
+
+  // Fly-to bei Wohnungs-Selektion (Sales-Modus)
+  useEffect(() => {
+    if (!selectedApartmentId) return;
+    if (uiMode !== 'sales') return;
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+
+    // Wohnung in Massings suchen
+    let target: { x: number; y: number; z: number } | null = null;
+    for (const m of massings) {
+      const sz = m.subzones.find((s) => s.id === selectedApartmentId);
+      if (sz) {
+        target = {
+          x: (sz.bbox.xMin + sz.bbox.xMax) / 2,
+          y: m.zOffset + m.height / 2 + 0.05,
+          z: (sz.bbox.zMin + sz.bbox.zMax) / 2,
+        };
+        break;
+      }
+    }
+    if (!target) return;
+
+    const currentDir = new THREE.Vector3()
+      .subVectors(camera.position, controls.target)
+      .normalize();
+    if (currentDir.y > 0.8) {
+      currentDir.set(0.7, 0.55, 0.7).normalize();
+    }
+    const targetDistance = 45;
+    const toTarget = new THREE.Vector3(target.x, target.y, target.z);
+    const toPos = toTarget.clone().add(currentDir.multiplyScalar(targetDistance));
+
+    cameraAnimRef.current = {
+      fromPos: camera.position.clone(),
+      toPos,
+      fromTarget: controls.target.clone(),
+      toTarget,
+      startTime: performance.now(),
+      duration: 850,
+    };
+  }, [selectedApartmentId, uiMode, massings]);
+
   useEffect(() => {
     const group = subzoneGroupRef.current;
     if (!group) return;
@@ -649,7 +713,7 @@ export function Scene() {
           <div className="tooltip-sub">{tooltip.description}</div>
         </div>
       )}
-      <TimeBar />
+      {uiMode === 'editor' && <TimeBar />}
     </div>
   );
 }

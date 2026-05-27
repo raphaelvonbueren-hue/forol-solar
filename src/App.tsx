@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { Controls } from '@/components/Controls';
 import { SalesSidebar } from '@/components/SalesSidebar';
+import { ContactButton } from '@/components/ContactButton';
+import { SunBar } from '@/components/SunBar';
 import { Scene } from '@/components/Scene';
 import { StatsBar } from '@/components/StatsBar';
 import { parseUrlParams } from '@/lib/url-params';
@@ -64,6 +66,8 @@ export function App() {
       <div className={`main ${isMobile ? 'mobile' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}>
         {uiMode === 'sales' ? <SalesSidebar /> : <Controls />}
         <Scene />
+        {uiMode === 'sales' && <SunBar />}
+        {uiMode === 'sales' && <ContactButton />}
         {isMobile && (
           <button
             className="sidebar-toggle"
