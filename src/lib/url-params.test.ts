@@ -12,6 +12,7 @@ describe('parseUrlParams', () => {
     expect(p.demo).toBeNull();
     expect(p.readonly).toBe(false);
     expect(p.edit).toBe(false);
+    expect(p.project).toBeNull();
   });
 
   it('embed=1 aktiviert auch compact', () => {

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useProjectStore } from '@/lib/store';
 import { flattenSalesApartments, formatCHF } from '@/lib/apartment-selectors';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { submitInquiry } from '@/lib/db-projects';
+import { parseUrlParams } from '@/lib/url-params';
 
 const FOROL_CONTACT_EMAIL = 'info@forol.ch';
 
@@ -10,6 +13,8 @@ export function ContactButton() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
+  const [submitState, setSubmitState] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const massings = useProjectStore((s) => s.massings);
   const selectedId = useProjectStore((s) => s.selectedApartmentId);
@@ -43,10 +48,47 @@ export function ContactButton() {
     return `mailto:${FOROL_CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setSubmitState('sending');
+    setSubmitError(null);
+
+    // Wenn Supabase verfügbar UND ein Projekt aus DB geladen wurde, in DB speichern
+    const urlParams = parseUrlParams();
+    if (isSupabaseConfigured && urlParams.project) {
+      try {
+        await submitInquiry({
+          name, email,
+          phone: phone || null,
+          message: message || null,
+          project_slug: urlParams.project,
+          apartment_snapshot: selectedApt ? {
+            code: selectedApt.name,
+            massing: selectedApt.massingName,
+            area_sqm: selectedApt.sales.areaSqm,
+            rooms: selectedApt.sales.rooms,
+            price: selectedApt.sales.price,
+            floor_label: selectedApt.sales.floorLabel,
+            project_slug: urlParams.project,
+            location_label: location.label,
+          } : { project_slug: urlParams.project, location_label: location.label },
+        });
+      } catch (err) {
+        const msg = (err as Error).message;
+        console.error('DB-Anfrage fehlgeschlagen, fahre mit Mailto fort:', msg);
+        setSubmitError(`Hinweis: Anfrage konnte nicht in der Datenbank gespeichert werden (${msg}). E-Mail wird trotzdem geöffnet.`);
+      }
+    }
+
+    // In jedem Fall Mailto öffnen (Fallback / als zusätzlicher Kanal)
     window.location.href = buildMailto();
-    setOpen(false);
+    setSubmitState('success');
+    // Modal nach kurzer Verzögerung schließen
+    setTimeout(() => {
+      setOpen(false);
+      setSubmitState('idle');
+      setName(''); setEmail(''); setPhone(''); setMessage('');
+    }, 1500);
   }
 
   return (
@@ -134,9 +176,14 @@ export function ContactButton() {
                   placeholder="Ihre Anfrage ..."
                 />
               </label>
-              <button type="submit" className="btn-submit">
-                Anfrage senden
+              <button type="submit" className="btn-submit" disabled={submitState === 'sending'}>
+                {submitState === 'sending' ? 'Wird gesendet …' :
+                 submitState === 'success' ? '✓ Anfrage gesendet' :
+                 'Anfrage senden'}
               </button>
+              {submitError && (
+                <div className="contact-warning">{submitError}</div>
+              )}
               <div className="contact-hint">
                 Beim Klick auf "Anfrage senden" öffnet sich Ihr E-Mail-Programm mit der vorbereiteten Nachricht.
               </div>

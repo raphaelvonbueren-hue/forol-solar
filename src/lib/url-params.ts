@@ -20,6 +20,8 @@ export interface UrlParams {
   readonly: boolean;
   /** edit=1 schaltet den Bauplaner-Modus ein (statt Vertriebs-Showcase) */
   edit: boolean;
+  /** project=slug — lädt ein Projekt aus der Supabase-DB */
+  project: string | null;
 }
 
 export function parseUrlParams(search: string = window.location.search): UrlParams {
@@ -35,6 +37,7 @@ export function parseUrlParams(search: string = window.location.search): UrlPara
     demo: p.get('demo'),
     readonly: p.get('readonly') === '1',
     edit: p.get('edit') === '1',
+    project: p.get('project'),
   };
 }
 
