@@ -264,7 +264,10 @@ export function Scene() {
     return () => { cancelled = true; };
   }, [neighborGLBFile]);
 
-  // Subzone-Visualisierung
+  // Subzone-Visualisierung — Wohnungs-Quader mit Status- und Selektions-Highlight
+  const selectedApartmentId = useProjectStore((s) => s.selectedApartmentId);
+  const hoveredApartmentId = useProjectStore((s) => s.hoveredApartmentId);
+  const uiMode = useProjectStore((s) => s.uiMode);
   useEffect(() => {
     const group = subzoneGroupRef.current;
     if (!group) return;
@@ -274,30 +277,68 @@ export function Scene() {
       disposeObject3D(c);
     }
     if (buildingMode !== 'polygon') return;
+
+    const isSalesMode = uiMode === 'sales';
     let aptIdx = 0;
     for (const m of massings) {
       for (let i = 0; i < m.subzones.length; i++) {
         const sz = m.subzones[i];
-        const color = APARTMENT_COLORS[aptIdx % APARTMENT_COLORS.length];
+        const isSelected = sz.id === selectedApartmentId;
+        const isHovered = sz.id === hoveredApartmentId;
+        const isOtherSelected = selectedApartmentId !== null && !isSelected;
+
+        // Farbe: Sales-Modus nutzt thumbnailColor wenn vorhanden, sonst Default
+        let color: string;
+        if (isSalesMode && sz.sales?.thumbnailColor) {
+          color = sz.sales.thumbnailColor;
+        } else {
+          color = APARTMENT_COLORS[aptIdx % APARTMENT_COLORS.length];
+        }
         aptIdx++;
+
+        // Status-Filter im Sales-Modus
+        let opacity = 0.18;
+        let visible = true;
+        if (isSalesMode && sz.sales?.status === 'sold') {
+          opacity = 0.08; // verkauft = sehr blass
+        }
+        if (isSelected) opacity = 0.55;
+        else if (isHovered) opacity = 0.40;
+        else if (isOtherSelected) opacity = 0.05; // andere blass wenn eine selectiert
+
         const w = sz.bbox.xMax - sz.bbox.xMin;
         const d = sz.bbox.zMax - sz.bbox.zMin;
-        const plane = new THREE.Mesh(
-          new THREE.PlaneGeometry(w * 0.95, d * 0.95),
-          new THREE.MeshBasicMaterial({
-            color, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false,
-          }),
-        );
-        plane.rotation.x = -Math.PI / 2;
-        plane.position.set(
+        const h = m.height * 0.95;
+
+        // Wohnungs-Quader
+        const boxGeom = new THREE.BoxGeometry(w * 0.92, h, d * 0.92);
+        const boxMat = new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false,
+        });
+        const boxMesh = new THREE.Mesh(boxGeom, boxMat);
+        boxMesh.position.set(
           (sz.bbox.xMin + sz.bbox.xMax) / 2,
-          m.zOffset + 0.05,
+          m.zOffset + h / 2 + 0.05,
           (sz.bbox.zMin + sz.bbox.zMax) / 2,
         );
-        group.add(plane);
+        boxMesh.visible = visible;
+        boxMesh.userData.apartmentId = sz.id;
+        group.add(boxMesh);
+
+        // Kanten für selektiert/hovered: deutlichere Sichtbarkeit
+        if (isSelected || isHovered) {
+          const edges = new THREE.EdgesGeometry(boxGeom);
+          const lineMat = new THREE.LineBasicMaterial({
+            color: isSelected ? 0xD32F2F : 0xFFFFFF,
+            linewidth: 2,
+          });
+          const lines = new THREE.LineSegments(edges, lineMat);
+          lines.position.copy(boxMesh.position);
+          group.add(lines);
+        }
       }
     }
-  }, [buildingMode, massings]);
+  }, [buildingMode, massings, selectedApartmentId, hoveredApartmentId, uiMode]);
 
   // Sonnenposition aktualisieren
   useEffect(() => {
@@ -390,6 +431,56 @@ export function Scene() {
     }
     canvas.addEventListener('pointermove', onMove);
     return () => canvas.removeEventListener('pointermove', onMove);
+  }, []);
+
+  // Click-Handler: Klick auf Wohnungs-Quader selectiert diese im Store
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const camera = cameraRef.current;
+    const subzoneGroup = subzoneGroupRef.current;
+    if (!canvas || !camera || !subzoneGroup) return;
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let downPos: { x: number; y: number } | null = null;
+
+    function onDown(e: PointerEvent) {
+      downPos = { x: e.clientX, y: e.clientY };
+    }
+    function onUp(e: PointerEvent) {
+      if (!downPos) return;
+      // Nur als Klick werten wenn nicht gedragged wurde
+      const dx = e.clientX - downPos.x;
+      const dy = e.clientY - downPos.y;
+      downPos = null;
+      if (Math.sqrt(dx * dx + dy * dy) > 5) return;
+
+      const rect = canvas!.getBoundingClientRect();
+      pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera!);
+      const meshes: THREE.Object3D[] = [];
+      subzoneGroup!.traverse((n) => {
+        if ((n as THREE.Mesh).isMesh && n.userData.apartmentId) meshes.push(n);
+      });
+      const hits = raycaster.intersectObjects(meshes, false);
+      const store = useProjectStore.getState();
+      if (hits.length > 0) {
+        const id = hits[0].object.userData.apartmentId as string;
+        store.setSelectedApartment(store.selectedApartmentId === id ? null : id);
+      } else {
+        // Klick ins Leere = Deselect
+        if (store.selectedApartmentId !== null) {
+          store.setSelectedApartment(null);
+        }
+      }
+    }
+
+    canvas.addEventListener('pointerdown', onDown);
+    canvas.addEventListener('pointerup', onUp);
+    return () => {
+      canvas.removeEventListener('pointerdown', onDown);
+      canvas.removeEventListener('pointerup', onUp);
+    };
   }, []);
 
   // Heatmap-Computation registrieren

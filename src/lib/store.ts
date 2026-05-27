@@ -11,7 +11,7 @@ import type {
   Project,
   SplitMode,
 } from '@/types';
-import { autoSplitMassing } from '@/lib/apartments';
+import { autoSplitMassing, mergeSubzoneData } from '@/lib/apartments';
 import type { OSMBuilding } from '@/lib/osm';
 import type { FacadeSample } from '@/lib/heatmap-compute';
 
@@ -75,6 +75,29 @@ interface ProjectState {
   setComputeStatus: (s: string) => void;
   requestCancel: () => void;
   resetCancel: () => void;
+
+  // Vertriebs-Modus: Wohnungs-Selektion und Filter
+  selectedApartmentId: string | null;
+  hoveredApartmentId: string | null;
+  setSelectedApartment: (id: string | null) => void;
+  setHoveredApartment: (id: string | null) => void;
+
+  salesFilter: {
+    statusFilter: Array<'available' | 'reserved' | 'sold'>;
+    minRooms: number | null;
+    maxRooms: number | null;
+    minArea: number | null;
+    maxArea: number | null;
+    minPrice: number | null;
+    maxPrice: number | null;
+    floorLabels: string[]; // leer = alle
+  };
+  setSalesFilter: (patch: Partial<ProjectState['salesFilter']>) => void;
+  resetSalesFilter: () => void;
+
+  // UI-Modus: 'sales' = Vertriebs-Showcase, 'editor' = Bauplaner-Tools
+  uiMode: 'sales' | 'editor';
+  setUiMode: (m: 'sales' | 'editor') => void;
 
   // Persistenz
   exportProject: () => Project;
@@ -237,6 +260,32 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   requestCancel: () => set({ cancelRequested: true }),
   resetCancel: () => set({ cancelRequested: false }),
 
+  selectedApartmentId: null,
+  hoveredApartmentId: null,
+  setSelectedApartment: (selectedApartmentId) => set({ selectedApartmentId }),
+  setHoveredApartment: (hoveredApartmentId) => set({ hoveredApartmentId }),
+
+  salesFilter: {
+    statusFilter: ['available', 'reserved'],
+    minRooms: null, maxRooms: null,
+    minArea: null, maxArea: null,
+    minPrice: null, maxPrice: null,
+    floorLabels: [],
+  },
+  setSalesFilter: (patch) => set((s) => ({ salesFilter: { ...s.salesFilter, ...patch } })),
+  resetSalesFilter: () => set({
+    salesFilter: {
+      statusFilter: ['available', 'reserved', 'sold'],
+      minRooms: null, maxRooms: null,
+      minArea: null, maxArea: null,
+      minPrice: null, maxPrice: null,
+      floorLabels: [],
+    },
+  }),
+
+  uiMode: 'sales',
+  setUiMode: (uiMode) => set({ uiMode }),
+
   exportProject: () => {
     const s = get();
     return {
@@ -251,14 +300,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     };
   },
   importProject: (project) => {
-    // Subzones neu berechnen, da bbox vom lokalen Koordinatensystem abhängt
-    const massings = project.massings.map((m) => ({
-      ...m,
-      subzones:
-        m.splitMode !== 'none' && m.outline.length >= 3
-          ? autoSplitMassing(m, m.splitMode, project.location)
-          : ([] as Apartment[]),
-    }));
+    // Subzones neu berechnen (bbox hängt vom lokalen Koordinatensystem ab),
+    // aber Sales-Daten aus dem Projekt erhalten
+    const massings = project.massings.map((m) => {
+      if (m.splitMode === 'none' || m.outline.length < 3) {
+        return { ...m, subzones: [] as Apartment[] };
+      }
+      const fresh = autoSplitMassing(m, m.splitMode, project.location);
+      return { ...m, subzones: mergeSubzoneData(fresh, m.subzones || []) };
+    });
     set({
       location: project.location,
       buildingMode: project.buildingMode,
@@ -277,15 +327,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 /**
  * Helper-Funktion, die bei jedem Standort-Wechsel die Wohnungen aller Massings
  * neu berechnet, da die Bounding-Boxes vom lokalen Koordinatensystem abhängen.
+ * Sales-Daten der existierenden Subzones bleiben erhalten.
  */
 export function recomputeAllSubzones(): void {
   const state = useProjectStore.getState();
-  const massings = state.massings.map((m) => ({
-    ...m,
-    subzones:
-      m.splitMode !== 'none' && m.outline.length >= 3
-        ? autoSplitMassing(m, m.splitMode, state.location)
-        : ([] as Apartment[]),
-  }));
+  const massings = state.massings.map((m) => {
+    if (m.splitMode === 'none' || m.outline.length < 3) {
+      return { ...m, subzones: [] as Apartment[] };
+    }
+    const fresh = autoSplitMassing(m, m.splitMode, state.location);
+    return { ...m, subzones: mergeSubzoneData(fresh, m.subzones || []) };
+  });
   useProjectStore.setState({ massings });
 }

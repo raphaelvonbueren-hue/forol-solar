@@ -79,3 +79,22 @@ export function autoSplitMassing(
 export function pointInBox(x: number, z: number, bbox: BoundingBox2D): boolean {
   return x >= bbox.xMin && x <= bbox.xMax && z >= bbox.zMin && z <= bbox.zMax;
 }
+
+/**
+ * Mergt Sales-Daten und Custom-Namen aus alten Subzones in neu berechnete Subzones.
+ * Match erfolgt über die Position der Subzone (Index) — funktioniert solange der
+ * SplitMode gleich bleibt. Bei SplitMode-Wechsel gehen die Sales-Daten verloren
+ * (das ist gewollt, weil die Anzahl der Wohnungen sich ändert).
+ */
+export function mergeSubzoneData(
+  newSubzones: Apartment[],
+  oldSubzones: Apartment[],
+): Apartment[] {
+  if (oldSubzones.length === 0) return newSubzones;
+  if (oldSubzones.length !== newSubzones.length) return newSubzones;
+  return newSubzones.map((sz, i) => ({
+    ...sz,
+    name: oldSubzones[i].name || sz.name,
+    sales: oldSubzones[i].sales,
+  }));
+}

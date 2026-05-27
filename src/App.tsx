@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { Controls } from '@/components/Controls';
+import { SalesSidebar } from '@/components/SalesSidebar';
 import { Scene } from '@/components/Scene';
 import { StatsBar } from '@/components/StatsBar';
 import { parseUrlParams } from '@/lib/url-params';
@@ -13,9 +14,15 @@ export function App() {
   const [urlParams] = useState(() => parseUrlParams());
   const importProject = useProjectStore((s) => s.importProject);
   const setLocation = useProjectStore((s) => s.setLocation);
+  const uiMode = useProjectStore((s) => s.uiMode);
+  const setUiMode = useProjectStore((s) => s.setUiMode);
 
   // URL-Parameter beim Start anwenden
   useEffect(() => {
+    // edit=1 schaltet den Editor-Modus ein
+    if (urlParams.edit) {
+      setUiMode('editor');
+    }
     if (urlParams.demo === 'ch144') {
       importProject(createCH144Demo());
     } else if (urlParams.lat !== null && urlParams.lon !== null) {
@@ -55,13 +62,13 @@ export function App() {
     <>
       {!urlParams.embed && <Header />}
       <div className={`main ${isMobile ? 'mobile' : ''} ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <Controls />
+        {uiMode === 'sales' ? <SalesSidebar /> : <Controls />}
         <Scene />
         {isMobile && (
           <button
             className="sidebar-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label={sidebarOpen ? 'Steuerung schließen' : 'Steuerung öffnen'}
+            aria-label={sidebarOpen ? 'Sidebar schließen' : 'Sidebar öffnen'}
           >
             {sidebarOpen ? '✕' : '☰'}
           </button>

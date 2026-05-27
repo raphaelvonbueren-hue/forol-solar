@@ -8,6 +8,8 @@ export function Header() {
   const exportProject = useProjectStore((s) => s.exportProject);
   const importProject = useProjectStore((s) => s.importProject);
   const location = useProjectStore((s) => s.location);
+  const uiMode = useProjectStore((s) => s.uiMode);
+  const setUiMode = useProjectStore((s) => s.setUiMode);
 
   function loadCH144Demo() {
     importProject(createCH144Demo());
@@ -52,7 +54,20 @@ export function Header() {
         <div className="tool-title">Sonnen- und Schattenanalyse</div>
       </div>
       <div className="header-meta">
-        <div className="ref">3D-SOLAR v7.0 · React</div>
+        <div className="mode-toggle">
+          <button
+            className={`mode-tab ${uiMode === 'sales' ? 'on' : ''}`}
+            onClick={() => setUiMode('sales')}
+          >
+            Vertrieb
+          </button>
+          <button
+            className={`mode-tab ${uiMode === 'editor' ? 'on' : ''}`}
+            onClick={() => setUiMode('editor')}
+          >
+            Bauplaner
+          </button>
+        </div>
         <input
           ref={fileInputRef}
           type="file"
@@ -63,11 +78,11 @@ export function Header() {
         <button className="btn primary" onClick={loadCH144Demo} title="FOROL CH144 Demo-Projekt laden">
           ⭐ CH144
         </button>
-        <button className="btn" onClick={() => fileInputRef.current?.click()}>
-          📂 Laden
+        <button className="btn" onClick={() => fileInputRef.current?.click()} title="Projekt laden">
+          📂
         </button>
-        <button className="btn" onClick={handleExport}>
-          💾 Speichern
+        <button className="btn" onClick={handleExport} title="Projekt speichern">
+          💾
         </button>
       </div>
     </header>

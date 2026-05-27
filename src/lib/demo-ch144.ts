@@ -1,9 +1,10 @@
 /**
  * FOROL CH144 Demo-Preset: zwei Holz-MFH über gemeinsamer Tiefgarage in der Schweiz.
- * Wird über den "CH144 laden"-Button im Header geladen.
+ * Inklusive realistischer Vertriebs-Daten für Wohnungen.
  */
 
-import type { LatLon, Massing, Project } from '@/types';
+import type { LatLon, Massing, Project, ApartmentSales } from '@/types';
+import { autoSplitMassing } from './apartments';
 
 const CH144_LAT = 47.4239;
 const CH144_LON = 9.3767; // Beispielkoordinate Ostschweiz
@@ -34,13 +35,45 @@ function newId(prefix: string): string {
   return prefix + Math.random().toString(36).slice(2, 8);
 }
 
+const FLOOR_LABELS = ['EG', '1.OG', '2.OG', 'Attika'];
+const APT_COLORS = ['#5E8FB8', '#7FA88C', '#D4A574', '#B87878', '#9B7BB8', '#7BB8A4'];
+
+/**
+ * Realistische Wohnungs-Vertriebsdaten generieren.
+ * Höhere Etagen = höhere Preise (Aussicht). Größere Wohnungen kosten mehr.
+ */
+function makeSales(
+  floor: number, // 0..3
+  isLeft: boolean, // halbiert die Etage in 2 Wohnungen
+  house: 'A' | 'B',
+): ApartmentSales {
+  // Basis-Preise pro m² steigen mit Etage
+  const pricePerSqm = 11500 + floor * 800;
+  // Wohnungen sind etwa 110m² (EG/OG) bzw. 135m² (Attika, weil größer)
+  const areaSqm = floor === 3 ? 135 : 110 + (isLeft ? 0 : 8);
+  const rooms = floor === 3 ? 4.5 : (isLeft ? 3.5 : 4.5);
+  const price = Math.round((pricePerSqm * areaSqm) / 10000) * 10000;
+
+  // Verfügbarkeits-Verteilung: Mix aus available/reserved/sold für realistisches Bild
+  // Deterministisch via Indizes, damit es bei jedem Aufruf gleich aussieht
+  const idx = (house === 'A' ? 0 : 4) + floor * 2 + (isLeft ? 0 : 1);
+  let status: ApartmentSales['status'] = 'available';
+  if (idx === 0 || idx === 5) status = 'sold';
+  else if (idx === 2 || idx === 7) status = 'reserved';
+
+  return {
+    price,
+    areaSqm,
+    rooms,
+    status,
+    floorLabel: FLOOR_LABELS[floor],
+    thumbnailColor: APT_COLORS[idx % APT_COLORS.length],
+  };
+}
+
 export function createCH144Demo(): Project {
   const origin = { lat: CH144_LAT, lon: CH144_LON };
   const massings: Massing[] = [];
-
-  // Haus A: 4-stöckig, 22×12m, gedreht 15° (sympathische Nicht-Achsentreue)
-  // Haus B: 4-stöckig, 22×12m, daneben (20m Abstand), gleiche Orientierung
-  // Beide auf gemeinsamer Tiefgarage — die wir hier nicht visualisieren da unterirdisch.
 
   const HOUSE_A_CX = -15;
   const HOUSE_B_CX = 15;
@@ -53,26 +86,36 @@ export function createCH144Demo(): Project {
 
   for (let house = 0; house < 2; house++) {
     const cx = house === 0 ? HOUSE_A_CX : HOUSE_B_CX;
-    const houseName = house === 0 ? 'Haus A' : 'Haus B';
+    const houseLabel = house === 0 ? 'A' : 'B';
+    const houseName = `Haus ${houseLabel}`;
     for (let floor = 0; floor < NUM_FLOORS; floor++) {
       const outline = rectPolygon(cx, HOUSE_CZ, HOUSE_W, HOUSE_D, HOUSE_ROT, origin);
-      massings.push({
-        id: newId('m'),
-        name: `${houseName} · ${floor === 0 ? 'EG' : `${floor}.OG`}`,
+      const massingId = newId('m');
+      const m: Massing = {
+        id: massingId,
+        name: `${houseName} · ${FLOOR_LABELS[floor]}`,
         outline,
         holes: [],
         height: FLOOR_H,
         zOffset: floor * FLOOR_H,
-        splitMode: 'cross2', // Pro Etage 2 Wohnungen, quer zur langen Achse
+        splitMode: 'cross2',
         subzones: [],
+      };
+
+      // Subzones direkt berechnen — beim Import des Stores werden sie sowieso nochmal aktualisiert,
+      // aber das spart einen Roundtrip
+      const subzones = autoSplitMassing(m, 'cross2', origin);
+      // Wohnungs-Daten anreichern
+      subzones.forEach((sz, i) => {
+        const isLeft = i === 0;
+        const aptNum = floor * 2 + i + 1;
+        sz.name = `${houseLabel}${String(aptNum).padStart(2, '0')}`;
+        sz.sales = makeSales(floor, isLeft, houseLabel as 'A' | 'B');
       });
+      m.subzones = subzones;
+      massings.push(m);
     }
   }
-
-  // Subzones werden vom Store beim Import nicht automatisch berechnet,
-  // deshalb hier die Bounding-Boxes vorberechnen — das passiert ohnehin
-  // beim ersten Render via recomputeAllSubzones in der App.
-  // Wir lassen das Feld leer, der Store füllt es.
 
   return {
     version: '1.0',
@@ -89,7 +132,7 @@ export function createCH144Demo(): Project {
       year: 2026,
       month: 5, // Juni
       day: 21,
-      localMinutes: 12 * 60, // Mittag
+      localMinutes: 12 * 60,
     },
     osmRadius: 200,
   };

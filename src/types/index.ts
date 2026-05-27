@@ -50,11 +50,34 @@ export interface BoundingBox2D {
   zMax: number;
 }
 
+/** Verkaufsstatus einer Wohnung. */
+export type ApartmentStatus = 'available' | 'reserved' | 'sold';
+
 /** Eine Wohnung als achsen-ausgerichtete Subzone einer Etage. */
 export interface Apartment {
   id: string;
   name: string;
   bbox: BoundingBox2D;
+  /** Optionale Vertriebs-Daten — können von Demo-Preset, Code oder Backend kommen */
+  sales?: ApartmentSales;
+}
+
+/** Vertriebs-Informationen einer Wohnung. */
+export interface ApartmentSales {
+  /** Verkaufspreis in CHF */
+  price?: number;
+  /** Wohnfläche in m² */
+  areaSqm?: number;
+  /** Anzahl Zimmer (z.B. 3.5, 4.5) */
+  rooms?: number;
+  /** Verkaufsstatus */
+  status?: ApartmentStatus;
+  /** Etagen-Label fürs UI (z.B. "EG", "1.OG") */
+  floorLabel?: string;
+  /** Optional: Bild-URL oder Inline-Farbverlauf */
+  thumbnailUrl?: string;
+  /** Optional: Hex-Farbe für Thumbnail-Verlauf wenn kein Bild */
+  thumbnailColor?: string;
 }
 
 /**
