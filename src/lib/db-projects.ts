@@ -11,6 +11,26 @@ import { getSupabase } from './supabase';
 import type { DbProject, DbApartment, DbInquiryInput } from './db-types';
 import { dbApartmentToSales } from './db-types';
 import { autoSplitMassing } from './apartments';
+import { createCH144Demo } from './demo-ch144';
+
+/**
+ * Wenn das geometry_json `useCodeFallback: true` gesetzt hat, holen wir die
+ * Geometrie aus dem hardcodeten Demo-Code. So müssen wir nicht das ganze
+ * Massings-JSON in der DB speichern, sondern nur die Vertriebs-Daten.
+ */
+function resolveGeometry(slug: string, geometryJson: Record<string, unknown>): Omit<Project, 'location'> {
+  if (geometryJson?.useCodeFallback === true) {
+    if (slug === 'ch144') {
+      const demo = createCH144Demo();
+      // Location wird vom DB-Eintrag überschrieben — Rest übernehmen
+      const { location: _l, ...rest } = demo;
+      void _l;
+      return rest;
+    }
+    throw new Error(`Code-Fallback für Slug "${slug}" nicht implementiert.`);
+  }
+  return geometryJson as unknown as Omit<Project, 'location'>;
+}
 
 /**
  * Lädt ein veröffentlichtes Projekt anhand seines Slugs.
@@ -42,8 +62,10 @@ export async function fetchProjectBySlug(slug: string): Promise<Project> {
   const apts = (dbApts ?? []) as DbApartment[];
 
   // 3. Project aus geometry_json zusammenbauen + Wohnungen einmergen
+  //    Falls geometry_json.useCodeFallback gesetzt ist, kommt die Geometrie aus dem Code.
+  const geometry = resolveGeometry(proj.slug, proj.geometry_json as Record<string, unknown>);
   const baseProject: Project = {
-    ...(proj.geometry_json as unknown as Project),
+    ...geometry,
     location: { lat: proj.lat, lon: proj.lon, label: proj.name },
   };
 
