@@ -12,6 +12,7 @@ import type {
   SplitMode,
 } from '@/types';
 import { autoSplitMassing, mergeSubzoneData } from '@/lib/apartments';
+import { getStoredPlacement } from '@/lib/placement-store';
 import type { OSMBuilding } from '@/lib/osm';
 import type { FacadeSample } from '@/lib/heatmap-compute';
 
@@ -316,8 +317,21 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       const fresh = autoSplitMassing(m, m.splitMode, project.location);
       return { ...m, subzones: mergeSubzoneData(fresh, m.subzones || []) };
     });
+
+    // Admin-Override: gespeicherte Position aus localStorage übernehmen
+    // wenn vorhanden (überschreibt Demo-Defaults für diesen Browser/User)
+    const stored = getStoredPlacement(project.location.label);
+    const finalLocation = stored
+      ? {
+          ...project.location,
+          rotationDeg: stored.rotationDeg,
+          offsetX: stored.offsetX,
+          offsetZ: stored.offsetZ,
+        }
+      : project.location;
+
     set({
-      location: project.location,
+      location: finalLocation,
       buildingMode: project.buildingMode,
       box: project.box,
       massings,

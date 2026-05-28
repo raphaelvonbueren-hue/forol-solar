@@ -2167,3 +2167,91 @@ input:focus, select:focus { outline: none; border-color: var(--forol-red); }
   background: #D4B864;
   color: white;
 }
+
+/* ============================================================
+   Sprint 4.3: Save as Default in PlacementSection
+   ============================================================ */
+.placement-default-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.placement-default-btn {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dark);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.placement-default-btn:hover:not(:disabled) {
+  border-color: var(--gray-light);
+}
+.placement-default-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.placement-default-btn.primary {
+  background: var(--forol-red);
+  color: white;
+  border-color: var(--forol-red);
+}
+.placement-default-btn.primary:hover:not(:disabled) {
+  opacity: 0.92;
+  border-color: var(--forol-red);
+}
+.placement-code-snippet {
+  margin-top: 10px;
+  background: #FAFAFA;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+}
+.placement-code-snippet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.placement-code-close {
+  background: none;
+  border: none;
+  color: var(--gray);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+}
+.placement-code-close:hover {
+  color: var(--dark);
+}
+.placement-code-pre {
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--dark);
+  background: white;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  margin: 0;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.placement-code-hint {
+  font-size: 9px;
+  color: var(--gray);
+  font-style: italic;
+  margin-top: 6px;
+}
