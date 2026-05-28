@@ -49,18 +49,13 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
   // TilesRenderer instanziieren
   const tiles = new TilesRenderer();
 
-  // Aggressives Tile-Loading für sichtbares Resultat
-  tiles.errorTarget = 2;        // Sehr aggressiv: kleine Pixel-Fehler-Toleranz erzwingt Detail-Tiles
-  tiles.errorThreshold = 60;    // Großer Threshold → Tiles werden auch geladen wenn Camera weit weg
-  tiles.maxDepth = Infinity;    // Keine Tiefenbegrenzung
-  tiles.displayActiveTiles = true;
-  tiles.loadSiblings = true;
-
   // Auth-Plugin: API-Token für Google Cloud
+  // useRecommendedSettings: false damit unser errorTarget nicht überschrieben wird
   tiles.registerPlugin(
     new GoogleCloudAuthPlugin({
       apiToken: apiKey,
       autoRefreshToken: true,
+      useRecommendedSettings: false,
     }),
   );
 
@@ -75,6 +70,13 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
       recenter: true,
     }),
   );
+
+  // Settings NACH Plugin-Register setzen (sonst werden sie überschrieben)
+  tiles.errorTarget = 2;
+  tiles.errorThreshold = 60;
+  tiles.maxDepth = Infinity;
+  tiles.displayActiveTiles = true;
+  tiles.loadSiblings = true;
 
   // Renderer-Konfiguration
   tiles.setCamera(camera);
