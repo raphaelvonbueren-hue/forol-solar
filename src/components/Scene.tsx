@@ -102,7 +102,14 @@ export function Scene() {
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
-    camera.position.set(60, 50, 60);
+    // Default-Kameraposition: Süd-Ost. Für Jakobspark setzen wir sie weiter südlich
+    // und höher, damit beim Init das gesamte Gebäude UND der Bodensee nördlich
+    // gleichzeitig im Sichtfeld sind.
+    if (/Jakobspark|Rorschach/i.test(location.label)) {
+      camera.position.set(45, 60, 90); // südlicher und höher
+    } else {
+      camera.position.set(60, 50, 60);
+    }
     cameraRef.current = camera;
 
     const controls = new OrbitControls(camera, canvasRef.current);
@@ -755,51 +762,53 @@ function addCompassLabels(scene: THREE.Scene) {
  * Bodensee-Backdrop für Jakobspark: blaue Wasser-Fläche nördlich der Anlage
  * plus große "BODENSEE"-Beschriftung — damit Kunden sofort die Orientierung haben.
  * Der Bodensee liegt ca. 30-50m nördlich der Jakobstrasse 90.
+ *
+ * Position in Three-Koord-System: -Z = Norden (vom Origin gesehen).
+ * Anlage selbst zentriert um (0, 0, 0), Süd-Trakt bei +Z=12, Nord-Trakte bei -Z=-10.
+ * Bodensee-Ufer beginnt ca. 15m nördlich der Anlage (-Z=-25).
  */
 function addLakeBackdrop(scene: THREE.Scene) {
-  // Wasser-Plane: groß, blau, halbtransparent, leicht über Ground-Niveau
-  // Position: nördlich der Anlage (negative Z im Three-Koord-System)
-  // Größe: 600m breit × 400m tief — deckt den gesamten sichtbaren Bereich nördlich ab
-  const waterGeom = new THREE.PlaneGeometry(600, 400);
-  const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x3E7CB1,        // Bodensee-Blau
-    roughness: 0.4,
-    metalness: 0.3,
-    transparent: true,
-    opacity: 0.85,
-  });
-  const water = new THREE.Mesh(waterGeom, waterMat);
-  water.rotation.x = -Math.PI / 2;
-  // Zentrum 230m nördlich vom Origin, knapp über Ground (verhindert Z-Fighting)
-  water.position.set(0, 0.04, -230);
-  water.receiveShadow = true;
-  scene.add(water);
-
-  // Sand-/Ufer-Streifen (schmal): zwischen Anlage und See für visuellen Übergang
-  const shoreGeom = new THREE.PlaneGeometry(600, 25);
+  // Sand-/Ufer-Streifen direkt nördlich der Anlage (zwischen Anlage und Wasser)
+  // Beginnt ca. 15m nördlich der Anlage und ist 15m breit
+  const shoreGeom = new THREE.PlaneGeometry(400, 15);
   const shoreMat = new THREE.MeshStandardMaterial({
-    color: 0xE8DCC4,        // sandiger Beigeton
+    color: 0xE8DCC4,
     roughness: 1.0,
   });
   const shore = new THREE.Mesh(shoreGeom, shoreMat);
   shore.rotation.x = -Math.PI / 2;
-  shore.position.set(0, 0.045, -42);
+  shore.position.set(0, 0.04, -32);
   scene.add(shore);
 
-  // "BODENSEE"-Beschriftung — groß, auf der Wasseroberfläche
-  function mkLakeLabel(text: string, x: number, z: number, sizeM: number) {
+  // Wasser-Plane: blau, leicht über Ground-Niveau, beginnt nördlich vom Ufer-Streifen
+  const waterGeom = new THREE.PlaneGeometry(800, 600);
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x3E7CB1,
+    roughness: 0.4,
+    metalness: 0.3,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const water = new THREE.Mesh(waterGeom, waterMat);
+  water.rotation.x = -Math.PI / 2;
+  water.position.set(0, 0.045, -340);
+  water.receiveShadow = true;
+  scene.add(water);
+
+  // "BODENSEE"-Beschriftung — groß, auf der Wasseroberfläche, gut sichtbar
+  function mkLakeLabel(text: string, x: number, z: number, sizeM: number, fillColor = '#FFFFFF') {
     const cvs = document.createElement('canvas');
-    cvs.width = 1024; cvs.height = 256;
+    cvs.width = 1024; cvs.height = 200;
     const c = cvs.getContext('2d')!;
     c.clearRect(0, 0, cvs.width, cvs.height);
-    c.fillStyle = '#FFFFFF';
-    c.strokeStyle = 'rgba(30, 60, 90, 0.5)';
-    c.lineWidth = 4;
-    c.font = 'bold 130px Inter, sans-serif';
+    c.fillStyle = fillColor;
+    c.strokeStyle = 'rgba(20, 50, 80, 0.7)';
+    c.lineWidth = 6;
+    c.font = 'bold 140px Inter, sans-serif';
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.strokeText(text, 512, 128);
-    c.fillText(text, 512, 128);
+    c.strokeText(text, 512, 100);
+    c.fillText(text, 512, 100);
     const tex = new THREE.CanvasTexture(cvs);
     tex.colorSpace = THREE.SRGBColorSpace;
     const aspect = cvs.width / cvs.height;
@@ -808,9 +817,33 @@ function addLakeBackdrop(scene: THREE.Scene) {
       new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }),
     );
     plane.rotation.x = -Math.PI / 2;
-    plane.position.set(x, 0.06, z);
+    plane.position.set(x, 0.08, z);
     scene.add(plane);
   }
-  mkLakeLabel('BODENSEE', 0, -150, 22);
-  mkLakeLabel('↑ Seesicht', 0, -75, 8);
+  // BODENSEE-Label sichtbar nahe der Anlage (ca. 90m nördlich)
+  mkLakeLabel('BODENSEE', 0, -100, 18);
+
+  // Wave-Linien für visuelle Wasser-Andeutung
+  for (let i = 0; i < 3; i++) {
+    const waveCvs = document.createElement('canvas');
+    waveCvs.width = 512; waveCvs.height = 32;
+    const wc = waveCvs.getContext('2d')!;
+    wc.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    wc.lineWidth = 2;
+    wc.beginPath();
+    for (let x = 0; x <= 512; x += 4) {
+      const y = 16 + Math.sin(x / 30) * 6;
+      if (x === 0) wc.moveTo(x, y); else wc.lineTo(x, y);
+    }
+    wc.stroke();
+    const waveTex = new THREE.CanvasTexture(waveCvs);
+    waveTex.colorSpace = THREE.SRGBColorSpace;
+    const wave = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 4),
+      new THREE.MeshBasicMaterial({ map: waveTex, transparent: true, depthWrite: false }),
+    );
+    wave.rotation.x = -Math.PI / 2;
+    wave.position.set(-50 + i * 50, 0.06, -150 - i * 40);
+    scene.add(wave);
+  }
 }
