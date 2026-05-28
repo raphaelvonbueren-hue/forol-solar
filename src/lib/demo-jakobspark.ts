@@ -2,8 +2,14 @@
  * FOROL Jakobspark Demo-Preset — Wohnüberbauung an der Jakobstrasse in Rorschach,
  * direkt am Bodensee. Bauherrschaft: Koller Family Immobilien.
  *
- * Geometrie: U-förmig mit 3 Trakten (Süd lang, West und Ost kurz) — Innenhof in
- * der Mitte, geöffnet nach Norden Richtung Bodensee.
+ * GEOMETRIE (aus Stockwerkplänen vom 28.05.2026 rekonstruiert):
+ * L-förmiger Komplex aus 2 Trakten:
+ *   - Süd-Trakt: lang, breit, leicht trapezoid, parallel zur Jakobstrasse,
+ *     im 4.OG mit Attika-Rücksprung
+ *   - Nord-Trakt: kleinerer Anbau nördlich davon, L-förmig, etwas vom Süd-Trakt versetzt,
+ *     wirkt im oberen Geschoss stärker
+ * Ausrichtung: leicht gedreht gegen Nord-Süd (~15-20° gegen Uhrzeigersinn,
+ * da die Jakobstrasse leicht von SW nach NO verläuft).
  *
  * 30 Eigentumswohnungen (2.5–4.5 Zi) auf 5 Etagen (EG + 4 OG),
  * dazu 1 Gewerbefläche im EG.
@@ -15,7 +21,6 @@ import type { LatLon, Massing, Project, ApartmentSales } from '@/types';
 import { autoSplitMassing } from './apartments';
 
 // Adresse: Jakobstrasse 90, 9400 Rorschach
-// Koordinaten: ca. 47.4790° N, 9.4910° E (Bodensee-Ufer ca. 50m nördlich)
 const JAKOBSPARK_LAT = 47.47875;
 const JAKOBSPARK_LON = 9.49095;
 
@@ -47,28 +52,23 @@ function newId(prefix: string): string {
 
 const FLOOR_LABELS = ['EG', '1.OG', '2.OG', '3.OG', '4.OG'];
 
-/**
- * Wohnungs-Stammdaten aus dem Scrape von jakobspark.swiss.
- * Reihenfolge: Nr | Zimmer | Etage(0-4) | Fläche m² | Aussenbereich | Preis (CHF) | Status
- * Status: 'available' | 'reserved' | 'sold' | 'inquiry' (auf Anfrage)
- */
 interface JakobsparkApt {
   nr: number;
-  rooms: number; // 2.5 / 3.5 / 4.5
-  floor: number; // 0..4
+  rooms: number;
+  floor: number;
   areaSqm: number;
-  outside: string; // "Loggia" / "Terrasse" / etc.
-  price: number | null; // null = auf Anfrage
+  outside: string;
+  price: number | null;
   status: ApartmentSales['status'];
   isGewerbe?: boolean;
 }
 
 const JAKOBSPARK_APARTMENTS: JakobsparkApt[] = [
-  // EG (Etage 0) — Gewerbe + 2 Wohnungen
+  // EG
   { nr: 0, rooms: 0,   floor: 0, areaSqm: 380, outside: '—',           price: null,    status: 'reserved', isGewerbe: true },
   { nr: 1, rooms: 4.5, floor: 0, areaSqm: 102, outside: 'Sitzplatz',   price: null,    status: 'reserved' },
   { nr: 2, rooms: 2.5, floor: 0, areaSqm:  77, outside: '—',           price: null,    status: 'reserved' },
-  // 1.OG (Etage 1) — 8 Wohnungen
+  // 1.OG
   { nr: 3, rooms: 4.5, floor: 1, areaSqm: 102, outside: 'Loggia',      price: null,    status: 'sold' },
   { nr: 4, rooms: 4.5, floor: 1, areaSqm: 106, outside: 'Terrasse',    price: null,    status: 'reserved' },
   { nr: 5, rooms: 3.5, floor: 1, areaSqm:  90, outside: 'Loggia',      price: 690000,  status: 'available' },
@@ -77,7 +77,7 @@ const JAKOBSPARK_APARTMENTS: JakobsparkApt[] = [
   { nr: 8, rooms: 3.5, floor: 1, areaSqm:  83, outside: '2 Loggias',   price: 700000,  status: 'available' },
   { nr: 9, rooms: 2.5, floor: 1, areaSqm:  86, outside: 'Loggia',      price: 765000,  status: 'available' },
   { nr:10, rooms: 3.5, floor: 1, areaSqm:  94, outside: 'Terrasse',    price: 910000,  status: 'available' },
-  // 2.OG (Etage 2) — 8 Wohnungen
+  // 2.OG
   { nr:11, rooms: 4.5, floor: 2, areaSqm: 102, outside: 'Loggia',      price: null,    status: 'reserved' },
   { nr:12, rooms: 4.5, floor: 2, areaSqm: 106, outside: 'Terrasse',    price: null,    status: 'reserved' },
   { nr:13, rooms: 3.5, floor: 2, areaSqm:  97, outside: 'Terrasse',    price: 900000,  status: 'available' },
@@ -86,25 +86,24 @@ const JAKOBSPARK_APARTMENTS: JakobsparkApt[] = [
   { nr:16, rooms: 3.5, floor: 2, areaSqm:  84, outside: '2 Loggias',   price: 720000,  status: 'available' },
   { nr:17, rooms: 2.5, floor: 2, areaSqm:  87, outside: 'Loggia',      price: 795000,  status: 'available' },
   { nr:18, rooms: 3.5, floor: 2, areaSqm:  92, outside: 'Loggia',      price: 890000,  status: 'available' },
-  // 3.OG (Etage 3) — 7 Wohnungen
+  // 3.OG
   { nr:19, rooms: 4.5, floor: 3, areaSqm: 108, outside: 'Loggia',      price: null,    status: 'sold' },
   { nr:20, rooms: 3.5, floor: 3, areaSqm:  99, outside: 'Terrasse',    price: 925000,  status: 'available' },
   { nr:21, rooms: 3.5, floor: 3, areaSqm:  93, outside: 'Loggia',      price: null,    status: 'reserved' },
   { nr:22, rooms: 4.5, floor: 3, areaSqm: 111, outside: 'Loggia',      price: 965000,  status: 'available' },
-  { nr:23, rooms: 3.5, floor: 3, areaSqm: 151, outside: 'Loggia/Terr.',price: null,    status: 'available' }, // auf Anfrage
+  { nr:23, rooms: 3.5, floor: 3, areaSqm: 151, outside: 'Loggia/Terr.',price: null,    status: 'available' },
   { nr:24, rooms: 2.5, floor: 3, areaSqm:  84, outside: 'Loggia',      price: null,    status: 'reserved' },
   { nr:25, rooms: 3.5, floor: 3, areaSqm:  92, outside: 'Loggia',      price: null,    status: 'reserved' },
-  // 4.OG / Attika (Etage 4) — 5 Wohnungen (eine als Maisonette*)
-  { nr:26, rooms: 3.5, floor: 4, areaSqm: 137, outside: 'Terrasse',    price: null,    status: 'available' }, // auf Anfrage
+  // 4.OG / Attika
+  { nr:26, rooms: 3.5, floor: 4, areaSqm: 137, outside: 'Terrasse',    price: null,    status: 'available' },
   { nr:27, rooms: 3.5, floor: 4, areaSqm:  91, outside: 'Loggia',      price: 850000,  status: 'available' },
   { nr:28, rooms: 4.5, floor: 4, areaSqm: 101, outside: 'Loggia',      price: 995000,  status: 'available' },
-  { nr:29, rooms: 3.5, floor: 4, areaSqm:  95, outside: 'Terrasse',    price: null,    status: 'available' }, // auf Anfrage
+  { nr:29, rooms: 3.5, floor: 4, areaSqm:  95, outside: 'Terrasse',    price: null,    status: 'available' },
   { nr:30, rooms: 2.5, floor: 4, areaSqm:  50, outside: 'Terrasse',    price: null,    status: 'reserved' },
 ];
 
-/** Farbe pro Wohnung basierend auf Status+Index. */
 function aptColor(apt: JakobsparkApt): string {
-  if (apt.isGewerbe) return '#8B7355'; // braun für Gewerbe
+  if (apt.isGewerbe) return '#8B7355';
   const palette = ['#5E8FB8', '#7FA88C', '#D4A574', '#B87878', '#9B7BB8', '#7BB8A4', '#A88EBF'];
   return palette[apt.nr % palette.length];
 }
@@ -124,111 +123,86 @@ export function createJakobsparkDemo(): Project {
   const origin = { lat: JAKOBSPARK_LAT, lon: JAKOBSPARK_LON };
   const massings: Massing[] = [];
 
-  // ====== GEBÄUDE-GEOMETRIE ======
-  // Gebäude ist U-förmig, geöffnet nach Norden zum See.
-  // 3 rechteckige Trakte:
-  //   Süd-Trakt: längs Jakobstrasse (Stadt), 45m × 13m, parallel zur Strasse
-  //   West-Trakt: vertikal nach Norden vom Süd-Trakt-West-Ende, 16m × 13m
-  //   Ost-Trakt: vertikal nach Norden vom Süd-Trakt-Ost-Ende, 16m × 13m
-  // Innenhof = ca. 14m × 16m zwischen den Nord-Flügeln
+  // ====== GEBÄUDE-GEOMETRIE (aus Stockwerkplänen) ======
+  // Anlage ist L-förmig, leicht gedreht gegen Nord-Süd-Achse (Jakobstrasse-Richtung)
+  // 2 Trakte:
+  //   Süd-Trakt: lang, breit, parallel zur Jakobstrasse
+  //   Nord-Trakt: kleiner L-förmig, nördlich-westlich versetzt
   //
-  // Koordinaten-System (lokal):
-  //   +X = Osten, +Z = Süden (Strasse), -Z = Norden (See)
-  //   Origin im Zentrum der gesamten Anlage
+  // Koordinaten-System: +X = Osten (Strassen-Achse), +Z = Süden, -Z = Norden (See)
+  // Origin im Zentrum der Anlage
+  // Rotation ~15° im Uhrzeigersinn = Süd-West nach Nord-Ost
 
-  const STRASSE_ROT_DEG = 0; // Jakobstrasse läuft Ost-West, also keine Rotation
+  const ENS_ROT_DEG = -15; // Anlage gegen Uhrzeigersinn gedreht (Jakobstrasse-Ausrichtung)
   const FLOOR_H = 2.85;
 
-  // Süd-Trakt (Stadtseite)
-  const SUED_CX = 0;     // zentriert
-  const SUED_CZ = +12;   // 12m südlich vom Mittelpunkt (Richtung Strasse)
-  const SUED_W = 45;     // 45m lang (Ost-West)
-  const SUED_D = 13;     // 13m tief
+  // Süd-Trakt (Haupt-Block): zentral südlich
+  const SUED_CX = 0;
+  const SUED_CZ = +8;     // 8m südlich vom Zentrum
+  const SUED_W = 50;      // ~50m lang (Ost-West vor Rotation)
+  const SUED_D = 14;      // ~14m tief
 
-  // West-Trakt (geht nach Norden)
-  const WEST_CX = -16;   // 16m westlich von Mitte
-  const WEST_CZ = -2.5;  // leicht nördlich vom Süd-Trakt-Anschluss
-  const WEST_W = 13;     // 13m breit (Ost-West)
-  const WEST_D = 16;     // 16m tief (Nord-Süd)
-
-  // Ost-Trakt
-  const OST_CX = +16;
-  const OST_CZ = -2.5;
-  const OST_W = 13;
-  const OST_D = 16;
-
-  // Pro Etage: 1 Massing pro Trakt (3 Trakte × 5 Etagen = 15 Massings)
-  // Aufteilung der Subzones:
-  //   Süd-Trakt OG: long4 = 4 Wohnungen entlang der Strasse
-  //   Süd-Trakt EG: long3 = 3 (Gewerbe + 2 Whg) — wir geben Gewerbe zone[0]
-  //   West/Ost-Trakt: cross2 = 2 Wohnungen (Nord+Süd)
-  //   Attika (4.OG): Süd-Trakt long3 (3 große), West/Ost-Trakt cross1 = none (1)
-
-  // Wir verteilen die 31 Einheiten (1 Gewerbe + 30 Whg) auf die 15 Massings:
-  //   EG (Etage 0): Süd long3 (3 Einheiten: Gewerbe, #1, #2), West none (0), Ost none (0) — 3 Einheiten
-  //   1.OG: Süd long4 (4: #3-#6), West cross2 (2: #7-#8), Ost cross2 (2: #9-#10) — 8 Einheiten
-  //   2.OG: Süd long4 (4: #11-#14), West cross2 (2: #15-#16), Ost cross2 (2: #17-#18) — 8 Einheiten
-  //   3.OG: Süd long4 (4: #19-#22), West cross2 (2: #23-#24), Ost long1...
-  //   Vereinfachung: wir nehmen long3 + cross2 + cross2 = 7 Einheiten
-  //   4.OG: Süd long3 (3: #26-#28), West none (1: #29), Ost none (1: #30) — 5 Einheiten
-  //   TOTAL: 3 + 8 + 8 + 7 + 5 = 31 ✓
+  // Nord-Trakt (kleinerer Block): nördlich + leicht versetzt nach Osten
+  const NORD_CX = +5;
+  const NORD_CZ = -14;    // ~14m nördlich
+  const NORD_W = 22;      // kürzer
+  const NORD_D = 18;      // tiefer
 
   const traktConfigs = [
     { name: 'Süd-Trakt', cx: SUED_CX, cz: SUED_CZ, w: SUED_W, d: SUED_D },
-    { name: 'West-Trakt', cx: WEST_CX, cz: WEST_CZ, w: WEST_W, d: WEST_D },
-    { name: 'Ost-Trakt', cx: OST_CX, cz: OST_CZ, w: OST_W, d: OST_D },
+    { name: 'Nord-Trakt', cx: NORD_CX, cz: NORD_CZ, w: NORD_W, d: NORD_D },
   ] as const;
 
   // Pro [Etage][Trakt] welcher Split-Mode wird verwendet
+  // Süd-Trakt: long4 oder long5 für ~4-5 Wohnungen pro Etage
+  // Nord-Trakt: cross2 für 2 Wohnungen pro Etage
+  // 4.OG: Süd-Trakt schrumpft (Attika) -> long3
   const splitMatrix: ('none' | 'long2' | 'long3' | 'long4' | 'cross2' | 'cross3')[][] = [
-    // EG: Süd long3 (Gewerbe + 2 Whg), West none, Ost none
-    ['long3', 'none',  'none'],
-    // 1.OG: Süd long4 (4), West cross2 (2), Ost cross2 (2) = 8
-    ['long4', 'cross2','cross2'],
-    // 2.OG: gleich wie 1.OG = 8
-    ['long4', 'cross2','cross2'],
-    // 3.OG: Süd long3 (3), West cross2 (2), Ost cross2 (2) = 7
-    ['long3', 'cross2','cross2'],
-    // 4.OG: Süd long3 (3), West none (=keine Subzones? Notlösung: cross2 mit 2 aber wir nutzen nur 1)
-    // Pragmatisch: Süd long3 (3) + West cross2 (1 davon nutzen wir) + Ost cross2 (1 davon nutzen wir)
-    // Doch das gibt nicht "5 Wohnungen". Lass uns "none" nehmen für West/Ost = 0 Wohnungen
-    // Stattdessen: long4 im Süd + cross2 in West/Ost = 4+1+1 ist nicht möglich
-    // Vereinfachung: Süd long3 + West long2 + Ost long2 = 3+2+2 = 7 (über Limit)
-    // Lass uns Süd long4 + West none + Ost none = 4 wohnungen (zu wenig)
-    // Wir nehmen Süd long4 + West cross2 + Ost cross2 = 8 wohnungen (zu viel, aber egal)
-    ['long4', 'cross2','cross2'],
+    ['long3', 'none'],          // EG: 3 Einheiten (Gewerbe + 2 Whg) im Süd, 0 im Nord
+    ['long4', 'cross2'],        // 1.OG: 4+2 = 6 (statt 8) -- die anderen 2 erweitern wir
+    ['long4', 'cross2'],        // 2.OG: 4+2 = 6
+    ['long3', 'cross2'],        // 3.OG: 3+2 = 5
+    ['long3', 'cross2'],        // 4.OG: 3+2 = 5
   ];
 
-  // Pro Trakt-Etage: welche Wohnungen aus der Tabelle eingebettet werden
-  // Reihenfolge in der Subzone-Iteration matched die Reihenfolge im Array unten
+  // Wohnungs-Zuordnung pro [Floor]-[Trakt]
+  // Wir haben 31 Einheiten zu verteilen
+  // Schichten der Tabelle:
+  //   EG: 3 Einheiten (G, 1, 2) -> alle in Süd-Trakt
+  //   1.OG: 8 Einheiten (3-10) -> 4 in Süd + 2 in Nord + 2 weitere ungerendert in DB
+  //   2.OG: 8 Einheiten (11-18) -> wie 1.OG
+  //   3.OG: 7 Einheiten (19-25) -> 3 in Süd + 2 in Nord + 2 weitere
+  //   4.OG: 5 Einheiten (26-30) -> 3 in Süd + 2 in Nord
+  // Idee: Wohnungen die "über"-zählig sind (nicht in Massings) bleiben in der DB sichtbar
+  // aber nicht im 3D-Modell selektierbar -- das ist akzeptabel für Demo
+
   const aptAssignment: { [key: string]: number[] } = {
-    // floor 0
-    '0-0': [0, 1, 2],         // Süd-EG: Gewerbe, #1, #2
-    '0-1': [],                // West-EG: keine
-    '0-2': [],                // Ost-EG: keine
-    // floor 1 (1.OG)
-    '1-0': [3, 4, 5, 6],      // Süd 1.OG: 4 Whg
-    '1-1': [7, 8],            // West 1.OG: 2 Whg
-    '1-2': [9, 10],           // Ost 1.OG: 2 Whg
-    // floor 2 (2.OG)
-    '2-0': [11, 12, 13, 14],
-    '2-1': [15, 16],
-    '2-2': [17, 18],
-    // floor 3 (3.OG)
-    '3-0': [19, 20, 22],      // long3 = 3 Whg (Maisonette#19 + #20 + #22)
-    '3-1': [23, 24],
-    '3-2': [21, 25],
-    // floor 4 (4.OG / Attika)
-    '4-0': [26, 27, 28, 30],  // long4 = 4 Whg
-    '4-1': [29, 29],          // West "duplicate" - wir lassen die 2. leer
-    '4-2': [29, 29],          // analog
+    // EG
+    '0-0': [0, 1, 2], '0-1': [],
+    // 1.OG
+    '1-0': [3, 5, 6, 10], '1-1': [4, 7],  // andere: 8,9 = sichtbar in DB-Liste, aber nicht im 3D selektiert
+    // 2.OG
+    '2-0': [11, 13, 14, 18], '2-1': [12, 17],
+    // 3.OG
+    '3-0': [19, 20, 22], '3-1': [23, 24],
+    // 4.OG
+    '4-0': [26, 27, 28], '4-1': [29, 30],
   };
 
   for (let floor = 0; floor < 5; floor++) {
-    for (let traktIdx = 0; traktIdx < 3; traktIdx++) {
+    for (let traktIdx = 0; traktIdx < 2; traktIdx++) {
       const trakt = traktConfigs[traktIdx];
       const splitMode = splitMatrix[floor][traktIdx];
-      const outline = rectPolygon(trakt.cx, trakt.cz, trakt.w, trakt.d, STRASSE_ROT_DEG, origin);
+
+      // Im 4.OG: Süd-Trakt etwas schmaler (Attika-Effekt)
+      let w = trakt.w;
+      let d = trakt.d;
+      if (floor === 4 && traktIdx === 0) {
+        w = trakt.w * 0.7;  // ~35m statt 50m im Attika-Geschoss
+        d = trakt.d * 0.8;
+      }
+
+      const outline = rectPolygon(trakt.cx, trakt.cz, w, d, ENS_ROT_DEG, origin);
       const massingId = newId('m');
 
       const m: Massing = {
@@ -253,7 +227,6 @@ export function createJakobsparkDemo(): Project {
           }
           const apt = JAKOBSPARK_APARTMENTS.find((a) => a.nr === aptNr);
           if (!apt) return;
-          // Wohnungs-Code aus Nummer (z.B. "01", "02", ..., "30") — Gewerbe = "G"
           sz.name = apt.isGewerbe ? 'G' : String(apt.nr).padStart(2, '0');
           sz.sales = makeSales(apt);
         });
@@ -272,11 +245,11 @@ export function createJakobsparkDemo(): Project {
       label: 'Jakobspark Rorschach · Jakobstrasse 90',
     },
     buildingMode: 'polygon',
-    box: { length: 45, width: 16, height: 14, rotationDeg: 0 },
+    box: { length: 50, width: 18, height: 14, rotationDeg: -15 },
     massings,
     dateTime: {
       year: 2026,
-      month: 5, // Juni
+      month: 5,
       day: 21,
       localMinutes: 12 * 60,
     },
