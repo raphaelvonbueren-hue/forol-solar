@@ -874,4 +874,128 @@ function addLakeBackdrop(scene: THREE.Scene) {
     tag(wave);
     scene.add(wave);
   }
+
+  // ============== PARK-GRÜNFLÄCHE ==============
+  // Park-Streifen entlang der Ufer-Promenade (zwischen Anlage und Sand)
+  // Gibt der Demo Grün-Anteil und passt zum Namen "Jakobspark"
+  const parkGeom = new THREE.PlaneGeometry(300, 14);
+  const parkMat = new THREE.MeshStandardMaterial({
+    color: 0x7BA05B, // gedämpftes Park-Grün
+    roughness: 1.0,
+  });
+  const park = new THREE.Mesh(parkGeom, parkMat);
+  park.rotation.x = -Math.PI / 2;
+  park.position.set(0, 0.035, -16);
+  park.receiveShadow = true;
+  tag(park);
+  scene.add(park);
+
+  // ============== BÄUME ==============
+  // Bäume entlang der Park-Promenade und am Süd-Rand (Strassenbäume)
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5C4030, roughness: 0.95 });
+  const crownMatLight = new THREE.MeshStandardMaterial({ color: 0x5A8C3F, roughness: 0.9 });
+  const crownMatDark = new THREE.MeshStandardMaterial({ color: 0x3D6B2A, roughness: 0.9 });
+
+  function addTree(x: number, z: number, scale = 1) {
+    const grp = new THREE.Group();
+    // Stamm
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.25 * scale, 0.35 * scale, 3 * scale, 6),
+      trunkMat,
+    );
+    trunk.position.y = 1.5 * scale;
+    trunk.castShadow = true;
+    grp.add(trunk);
+    // Krone (2 überlappende Spheres für mehr Volumen)
+    const crownGeom = new THREE.SphereGeometry(1.8 * scale, 8, 6);
+    const crown1 = new THREE.Mesh(crownGeom, crownMatLight);
+    crown1.position.y = 3.8 * scale;
+    crown1.castShadow = true;
+    grp.add(crown1);
+    const crown2 = new THREE.Mesh(
+      new THREE.SphereGeometry(1.4 * scale, 8, 6),
+      crownMatDark,
+    );
+    crown2.position.set(0.5 * scale, 4.5 * scale, -0.3 * scale);
+    crown2.castShadow = true;
+    grp.add(crown2);
+
+    grp.position.set(x, 0, z);
+    tag(grp);
+    grp.children.forEach((c) => { c.userData.lakeBackdrop = true; });
+    scene.add(grp);
+  }
+
+  // Strassenbäume entlang der Jakobstrasse (südlich der Anlage)
+  for (let i = -6; i <= 6; i++) {
+    if (i === 0) continue;
+    const scale = 0.9 + ((i * 7) % 5) * 0.06;
+    addTree(i * 8, +24, scale);
+  }
+
+  // Park-Bäume (zwischen Anlage und See)
+  const parkTreePositions = [
+    [-50, -18, 1.1], [-30, -20, 1.0], [-12, -19, 1.2],
+    [12, -19, 1.05], [30, -18, 1.15], [50, -20, 1.0],
+    [-65, -15, 0.95], [65, -16, 1.0],
+  ];
+  parkTreePositions.forEach(([x, z, s]) => addTree(x, z, s));
+
+  // ============== KORNHAUS-MARKER ==============
+  // Das historische Kornhaus liegt ca. 80m nordöstlich vom Jakobspark
+  // Als Wahrzeichen visualisieren mit großem dunklem Block
+  const kornhausGeom = new THREE.BoxGeometry(20, 16, 14);
+  const kornhausMat = new THREE.MeshStandardMaterial({
+    color: 0xB89878, // helles Sandstein-Beige
+    roughness: 0.85,
+  });
+  const kornhaus = new THREE.Mesh(kornhausGeom, kornhausMat);
+  kornhaus.position.set(75, 8, -8);
+  kornhaus.castShadow = true;
+  kornhaus.receiveShadow = true;
+  tag(kornhaus);
+  scene.add(kornhaus);
+
+  // Spitzdach aufs Kornhaus
+  const kornhausRoofGeom = new THREE.ConeGeometry(11, 6, 4, 1);
+  const kornhausRoofMat = new THREE.MeshStandardMaterial({
+    color: 0x5C3B26, // dunkles Ziegelrot
+    roughness: 0.9,
+  });
+  const kornhausRoof = new THREE.Mesh(kornhausRoofGeom, kornhausRoofMat);
+  kornhausRoof.position.set(75, 19, -8);
+  kornhausRoof.rotation.y = Math.PI / 4;
+  kornhausRoof.castShadow = true;
+  tag(kornhausRoof);
+  scene.add(kornhausRoof);
+
+  // Beschriftung "Kornhaus" über dem Dach
+  function mkSmallLabel(text: string, x: number, y: number, z: number, sizeM: number) {
+    const cvs = document.createElement('canvas');
+    cvs.width = 512; cvs.height = 128;
+    const c = cvs.getContext('2d')!;
+    c.clearRect(0, 0, cvs.width, cvs.height);
+    c.fillStyle = '#1A1A1A';
+    c.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    c.lineWidth = 3;
+    c.font = 'bold 60px Inter, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.strokeText(text, 256, 64);
+    c.fillText(text, 256, 64);
+    const tex = new THREE.CanvasTexture(cvs);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const aspect = cvs.width / cvs.height;
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(sizeM * aspect, sizeM),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    plane.position.set(x, y, z);
+    // Billboard-Effekt: Plane immer zur Kamera (vereinfacht: nur Y-Rotation, beim Update)
+    plane.userData.billboard = true;
+    tag(plane);
+    scene.add(plane);
+  }
+  mkSmallLabel('Kornhaus', 75, 25, -8, 3.5);
+  mkSmallLabel('Jakobstrasse →', 0, 6, 22, 4);
 }
