@@ -81,8 +81,33 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
   // Debug: Event-Listener für Tile-Loading
   let loadStartCount = 0;
   let loadEndCount = 0;
+  let firstBoundsLogged = false;
   tiles.addEventListener('load-tile-set', () => {
     console.log('[GoogleTiles] load-tile-set');
+    if (!firstBoundsLogged) {
+      firstBoundsLogged = true;
+      // Bounding-Sphere des Tilesets nach kurzer Verzögerung holen
+      setTimeout(() => {
+        const sphere = new THREE.Sphere();
+        const hasBounds = tiles.getBoundingSphere(sphere);
+        const box = new THREE.Box3();
+        const hasBox = tiles.getBoundingBox(box);
+        console.log('[GoogleTiles] Bounds:', {
+          hasSphere: hasBounds,
+          sphereCenter: hasBounds ? [sphere.center.x.toFixed(1), sphere.center.y.toFixed(1), sphere.center.z.toFixed(1)] : null,
+          sphereRadius: hasBounds ? sphere.radius.toFixed(1) : null,
+          hasBox,
+          boxMin: hasBox ? [box.min.x.toFixed(1), box.min.y.toFixed(1), box.min.z.toFixed(1)] : null,
+          boxMax: hasBox ? [box.max.x.toFixed(1), box.max.y.toFixed(1), box.max.z.toFixed(1)] : null,
+          cameraPos: [camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1)],
+          groupPos: [tiles.group.position.x.toFixed(1), tiles.group.position.y.toFixed(1), tiles.group.position.z.toFixed(1)],
+          groupChildren: tiles.group.children.length,
+        });
+        // Expose globally for inspection
+        (window as any).__tiles = tiles;
+        (window as any).__camera = camera;
+      }, 2000);
+    }
   });
   tiles.addEventListener('tile-download-start', () => {
     loadStartCount++;
