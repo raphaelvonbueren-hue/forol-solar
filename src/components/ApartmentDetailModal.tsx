@@ -5,6 +5,11 @@ import {
   STATUS_LABELS,
   STATUS_COLORS,
 } from '@/lib/apartment-selectors';
+import {
+  computeApartmentSunHours,
+  findApartmentMassing,
+  findFloorIndex,
+} from '@/lib/apartment-sun';
 import { useMemo } from 'react';
 
 export function ApartmentDetailModal() {
@@ -12,9 +17,32 @@ export function ApartmentDetailModal() {
   const selectedId = useProjectStore((s) => s.selectedApartmentId);
   const setSelected = useProjectStore((s) => s.setSelectedApartment);
   const projectName = useProjectStore((s) => s.location.label);
+  const lat = useProjectStore((s) => s.location.lat);
+  const lon = useProjectStore((s) => s.location.lon);
+  const dateTime = useProjectStore((s) => s.dateTime);
 
   const all = useMemo(() => flattenSalesApartments(massings), [massings]);
   const apt = useMemo(() => all.find((a) => a.id === selectedId), [all, selectedId]);
+
+  // Sonnenstunden-Berechnung
+  const sunResult = useMemo(() => {
+    if (!apt) return null;
+    const m = findApartmentMassing(apt.id, massings);
+    if (!m) return null;
+    const floorIdx = findFloorIndex(m.id, massings);
+    // Jakobspark ist um -15° rotiert; bei anderen Projekten Default 0
+    const isJakobspark = /Jakobspark|Rorschach/i.test(projectName);
+    const buildingRotation = isJakobspark ? -15 * Math.PI / 180 : 0;
+    return computeApartmentSunHours(
+      apt.apartment,
+      m,
+      dateTime,
+      lat,
+      lon,
+      buildingRotation,
+      floorIdx,
+    );
+  }, [apt, massings, dateTime, lat, lon, projectName]);
 
   if (!apt) return null;
 
@@ -121,6 +149,40 @@ export function ApartmentDetailModal() {
             <span>3D-Rundgang</span>
           </button>
         </div>
+
+        {sunResult && (
+          <div className="apt-modal-sun">
+            <div className="apt-modal-sun-header">
+              <div className="apt-modal-sun-icon">☀️</div>
+              <div className="apt-modal-sun-titles">
+                <div className="apt-modal-sun-title">Sonneneinfall heute</div>
+                <div className="apt-modal-sun-subtitle">
+                  <strong>{sunResult.totalSunnyHours}h</strong> direkt &middot; Ausrichtung {sunResult.facingLabel}
+                </div>
+              </div>
+            </div>
+            <div className="apt-modal-sun-bar">
+              {sunResult.hourly.map((h) => (
+                <div
+                  key={h.hour}
+                  className={`apt-modal-sun-hour ${h.sunny ? 'sunny' : 'shaded'}`}
+                  style={{ opacity: h.sunny ? 0.4 + h.intensity * 0.6 : 0.18 }}
+                  title={`${String(h.hour).padStart(2, '0')}:00 — ${h.sunny ? `Sonne (${Math.round(h.intensity * 100)}%)` : 'Schatten'}`}
+                >
+                  <div className="apt-modal-sun-hour-lbl">{h.hour}</div>
+                </div>
+              ))}
+            </div>
+            {sunResult.bestHourRange && (
+              <div className="apt-modal-sun-meta">
+                Beste Sonnenzeit: <strong>{sunResult.bestHourRange.start}:00 – {sunResult.bestHourRange.end + 1}:00</strong>
+              </div>
+            )}
+            <div className="apt-modal-sun-credit">
+              Live-berechnet mit NOAA Solar Position Algorithm
+            </div>
+          </div>
+        )}
 
         {s.price !== undefined && (
           <div className="apt-modal-data">

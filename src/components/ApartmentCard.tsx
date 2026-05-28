@@ -1,5 +1,12 @@
+import { useMemo } from 'react';
+import { useProjectStore } from '@/lib/store';
 import type { SalesApartment } from '@/lib/apartment-selectors';
 import { STATUS_LABELS, STATUS_COLORS, formatCHF } from '@/lib/apartment-selectors';
+import {
+  computeApartmentSunHours,
+  findApartmentMassing,
+  findFloorIndex,
+} from '@/lib/apartment-sun';
 
 interface Props {
   apartment: SalesApartment;
@@ -11,6 +18,22 @@ interface Props {
 }
 
 export function ApartmentCard({ apartment, selected, hovered, onClick, onMouseEnter, onMouseLeave }: Props) {
+  const massings = useProjectStore((s) => s.massings);
+  const lat = useProjectStore((s) => s.location.lat);
+  const lon = useProjectStore((s) => s.location.lon);
+  const projectName = useProjectStore((s) => s.location.label);
+  const dateTime = useProjectStore((s) => s.dateTime);
+
+  const sunHours = useMemo(() => {
+    const m = findApartmentMassing(apartment.id, massings);
+    if (!m) return null;
+    const floorIdx = findFloorIndex(m.id, massings);
+    const isJakobspark = /Jakobspark|Rorschach/i.test(projectName);
+    const rot = isJakobspark ? -15 * Math.PI / 180 : 0;
+    const r = computeApartmentSunHours(apartment.apartment, m, dateTime, lat, lon, rot, floorIdx);
+    return r.totalSunnyHours;
+  }, [apartment, massings, lat, lon, projectName, dateTime]);
+
   const s = apartment.sales;
   const status = s.status ?? 'available';
   const statusColor = STATUS_COLORS[status];
@@ -27,6 +50,11 @@ export function ApartmentCard({ apartment, selected, hovered, onClick, onMouseEn
         className="apt-thumb"
         style={{ background: `linear-gradient(135deg, ${thumbnail} 0%, ${thumbnail}dd 50%, ${thumbnail}99 100%)` }}
       >
+        {sunHours !== null && sunHours > 0 && (
+          <div className="apt-card-sun" title={`${sunHours}h direkter Sonneneinfall heute`}>
+            ☀ {sunHours}h
+          </div>
+        )}
         <div className="apt-thumb-overlay">
           <div className="apt-floor">{s.floorLabel ?? '—'}</div>
         </div>
