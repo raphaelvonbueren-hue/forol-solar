@@ -260,6 +260,11 @@ export function Scene() {
       }
 
       if (apiKey) {
+        // Tiles aktiv: Camera far weiter setzen (Top-Level Tiles haben sehr großen Radius)
+        if (camera instanceof THREE.PerspectiveCamera) {
+          camera.far = 100000;
+          camera.updateProjectionMatrix();
+        }
         try {
           googleTilesRef.current = initGoogleTiles({
             apiKey,
@@ -272,15 +277,25 @@ export function Scene() {
         } catch (e) {
           console.warn('[Scene] Google 3D Tiles konnten nicht geladen werden:', e);
         }
+      } else {
+        // Kein API Key: Camera far auf Default
+        if (camera instanceof THREE.PerspectiveCamera) {
+          camera.far = 5000;
+          camera.updateProjectionMatrix();
+        }
       }
     } else {
-      // Nicht-Jakobspark: Ground/Grid sichtbar lassen
+      // Nicht-Jakobspark: Ground/Grid sichtbar lassen, camera far default
       const groundMesh = scene.children.find((o) => o.userData?.isGroundPlane) as
         THREE.Mesh | undefined;
       const groundGrid = scene.children.find((o) => o.userData?.isGroundGrid) as
         THREE.Object3D | undefined;
       if (groundMesh) groundMesh.visible = true;
       if (groundGrid) groundGrid.visible = true;
+      if (camera instanceof THREE.PerspectiveCamera) {
+        camera.far = 5000;
+        camera.updateProjectionMatrix();
+      }
     }
   }, [location.label, location.lat, location.lon]);
 
