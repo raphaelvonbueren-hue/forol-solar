@@ -23,6 +23,8 @@ export interface GoogleTilesOptions {
   apiKey: string;
   /** Geographic origin (where the local 3D coordinate system is centered). */
   origin: { lat: number; lon: number };
+  /** Height above ellipsoid (meters above sea level). For Bodensee/Rorschach ~400m. */
+  heightAboveEllipsoid?: number;
   scene: THREE.Scene;
   camera: THREE.Camera;
   renderer: THREE.WebGLRenderer;
@@ -38,14 +40,19 @@ export interface GoogleTilesHandle {
  * Initialisiert Google 3D Tiles und positioniert sie relativ zur Origin-Location.
  *
  * Die Tiles kommen in WGS84-Ellipsoid-Koordinaten. Der ReorientationPlugin
- * zentriert das Tileset auf eine Lat/Lon-Position (in Radian) und richtet
- * die Achsen zu Three.js (+Y up) aus.
+ * zentriert das Tileset auf eine Lat/Lon/Height-Position und richtet die
+ * Achsen zu Three.js (+Y up) aus.
  */
 export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
-  const { apiKey, origin, scene, camera, renderer } = opts;
+  const { apiKey, origin, heightAboveEllipsoid = 400, scene, camera, renderer } = opts;
 
   // TilesRenderer instanziieren
   const tiles = new TilesRenderer();
+
+  // Aggressives Tile-Loading für sichtbares Resultat
+  tiles.errorTarget = 12;       // Default ist meist 6 — höher = weniger Detail aber schnelleres Loading
+  tiles.displayActiveTiles = true;  // Auch nicht-aktive Tiles anzeigen wenn sie geladen sind
+  tiles.loadSiblings = true;    // Geschwister-Tiles vorladen für smootheres Erlebnis
 
   // Auth-Plugin: API-Token für Google Cloud
   tiles.registerPlugin(
@@ -56,12 +63,13 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
   );
 
   // Reorientation: Tileset auf unsere Origin zentrieren und in lokales Koord-System bringen
-  // Lat/Lon müssen in RADIAN sein
+  // Lat/Lon müssen in RADIAN sein, height in Metern über WGS84-Ellipsoid
+  // Rorschach am Bodensee liegt bei ca. 400m über Meer
   tiles.registerPlugin(
     new ReorientationPlugin({
       lat: (origin.lat * Math.PI) / 180,
       lon: (origin.lon * Math.PI) / 180,
-      height: 0,
+      height: heightAboveEllipsoid,
       recenter: true,
     }),
   );
@@ -70,11 +78,36 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
   tiles.setCamera(camera);
   tiles.setResolutionFromRenderer(camera, renderer);
 
+  // Debug: Event-Listener für Tile-Loading
+  let loadStartCount = 0;
+  let loadEndCount = 0;
+  tiles.addEventListener('load-tile-set', () => {
+    console.log('[GoogleTiles] load-tile-set');
+  });
+  tiles.addEventListener('tile-download-start', () => {
+    loadStartCount++;
+    if (loadStartCount <= 5 || loadStartCount % 20 === 0) {
+      console.log(`[GoogleTiles] tile-download-start #${loadStartCount}`);
+    }
+  });
+  tiles.addEventListener('load-model', () => {
+    loadEndCount++;
+    if (loadEndCount <= 5 || loadEndCount % 20 === 0) {
+      console.log(`[GoogleTiles] load-model #${loadEndCount}`);
+    }
+  });
+  tiles.addEventListener('load-error', (e: any) => {
+    console.warn('[GoogleTiles] load-error:', e?.error?.message, e?.url);
+  });
+
   // Tag für Cleanup
   tiles.group.userData.googleTiles = true;
   // Im Hintergrund rendern (hinter eigenem Gebäude)
   tiles.group.renderOrder = -1;
   scene.add(tiles.group);
+
+  // Initial-Update sofort triggern
+  tiles.update();
 
   // Update-Funktion (in Render-Loop aufrufen)
   const update = () => {
