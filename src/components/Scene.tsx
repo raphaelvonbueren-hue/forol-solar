@@ -13,6 +13,7 @@ import {
   type FacadeSample,
 } from '@/lib/heatmap-compute';
 import { computeShadowAnalysis } from '@/three/heatmap';
+import { initGoogleTiles, getGoogleApiKey, type GoogleTilesHandle } from '@/three/google-tiles';
 import type { ApartmentResult } from '@/types';
 import { TimeBar } from './TimeBar';
 
@@ -56,6 +57,7 @@ export function Scene() {
   const samplesRef = useRef<FacadeSample[] | null>(null);
   const resultsRef = useRef<Float32Array | null>(null);
   const frameRef = useRef<number | null>(null);
+  const googleTilesRef = useRef<GoogleTilesHandle | null>(null);
   // Kamera-Animation (für Fly-to bei Wohnungs-Selektion)
   const cameraAnimRef = useRef<{
     fromPos: THREE.Vector3;
@@ -184,6 +186,8 @@ export function Scene() {
         }
       }
       controls.update();
+      // Google 3D Tiles update (falls aktiv)
+      googleTilesRef.current?.update();
       renderer.render(scene, camera);
       frameRef.current = requestAnimationFrame(loop);
     }
@@ -197,12 +201,13 @@ export function Scene() {
     };
   }, []);
 
-  // Project-spezifische Szene-Anpassungen (Bodensee, Kamera-Position)
+  // Project-spezifische Szene-Anpassungen (Bodensee, Kamera-Position, Google 3D Tiles)
   // reagiert auf location.label, da location async aus der DB geladen wird.
   useEffect(() => {
     const scene = sceneRef.current;
     const camera = cameraRef.current;
-    if (!scene || !camera) return;
+    const renderer = rendererRef.current;
+    if (!scene || !camera || !renderer) return;
 
     const isJakobspark = /Jakobspark|Rorschach/i.test(location.label);
 
@@ -216,6 +221,12 @@ export function Scene() {
       disposeObject3D(obj);
     });
 
+    // Alte Google Tiles disposen
+    if (googleTilesRef.current) {
+      googleTilesRef.current.dispose();
+      googleTilesRef.current = null;
+    }
+
     if (isJakobspark) {
       addLakeBackdrop(scene);
       // Kamera in Jakobspark-Position bringen, falls noch in Default-Position
@@ -227,8 +238,25 @@ export function Scene() {
         camera.position.set(45, 60, 90);
         controlsRef.current?.update();
       }
+
+      // Phase 2: Google Photorealistic 3D Tiles laden (falls API Key vorhanden)
+      const apiKey = getGoogleApiKey();
+      if (apiKey) {
+        try {
+          googleTilesRef.current = initGoogleTiles({
+            apiKey,
+            origin: { lat: location.lat, lon: location.lon },
+            scene,
+            camera,
+            renderer,
+          });
+          console.log('[Scene] Google 3D Tiles geladen');
+        } catch (e) {
+          console.warn('[Scene] Google 3D Tiles konnten nicht geladen werden:', e);
+        }
+      }
     }
-  }, [location.label]);
+  }, [location.label, location.lat, location.lon]);
 
   // Building (Box / Polygon / Upload) synchronisieren
   useEffect(() => {
