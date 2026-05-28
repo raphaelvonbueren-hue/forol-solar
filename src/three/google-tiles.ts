@@ -17,7 +17,7 @@
 
 import * as THREE from 'three';
 import { TilesRenderer } from '3d-tiles-renderer';
-import { GoogleCloudAuthPlugin } from '3d-tiles-renderer/plugins';
+import { GoogleCloudAuthPlugin, ReorientationPlugin } from '3d-tiles-renderer/plugins';
 
 export interface GoogleTilesOptions {
   apiKey: string;
@@ -36,14 +36,18 @@ export interface GoogleTilesHandle {
 
 /**
  * Initialisiert Google 3D Tiles und positioniert sie relativ zur Origin-Location.
- * Die Tiles werden via WGS84-Koordinaten geladen und müssen zu unserem
- * lokalen ENU-Koordinatensystem transformiert werden.
+ *
+ * Die Tiles kommen in WGS84-Ellipsoid-Koordinaten. Der ReorientationPlugin
+ * zentriert das Tileset auf eine Lat/Lon-Position (in Radian) und richtet
+ * die Achsen zu Three.js (+Y up) aus.
  */
 export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
   const { apiKey, origin, scene, camera, renderer } = opts;
 
   // TilesRenderer instanziieren
   const tiles = new TilesRenderer();
+
+  // Auth-Plugin: API-Token für Google Cloud
   tiles.registerPlugin(
     new GoogleCloudAuthPlugin({
       apiToken: apiKey,
@@ -51,24 +55,20 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
     }),
   );
 
+  // Reorientation: Tileset auf unsere Origin zentrieren und in lokales Koord-System bringen
+  // Lat/Lon müssen in RADIAN sein
+  tiles.registerPlugin(
+    new ReorientationPlugin({
+      lat: (origin.lat * Math.PI) / 180,
+      lon: (origin.lon * Math.PI) / 180,
+      height: 0,
+      recenter: true,
+    }),
+  );
+
   // Renderer-Konfiguration
   tiles.setCamera(camera);
   tiles.setResolutionFromRenderer(camera, renderer);
-
-  // Origin-Setup: Tiles sind in ECEF (Earth-Centered Earth-Fixed) Koordinaten.
-  // Wir müssen einen Frame definieren, der unseren lokalen Origin zur
-  // Geo-Position macht.
-  // 3d-tiles-renderer bietet hierfür eine `setLatLonToYUp()` Methode.
-  tiles.group.rotation.x = -Math.PI / 2;
-
-  // ENU-Frame zentrieren — verwenden wir LatLonToYUp Helper
-  // (Variation: manche Versionen haben diese als Plugin "ReorientationPlugin")
-  if ((tiles as any).setLatLonToYUp) {
-    (tiles as any).setLatLonToYUp(
-      origin.lat * Math.PI / 180,
-      origin.lon * Math.PI / 180,
-    );
-  }
 
   // Tag für Cleanup
   tiles.group.userData.googleTiles = true;
