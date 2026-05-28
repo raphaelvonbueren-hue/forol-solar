@@ -10,6 +10,10 @@ import {
   findApartmentMassing,
   findFloorIndex,
 } from '@/lib/apartment-sun';
+import {
+  JAKOBSPARK_APARTMENT_IMAGES,
+  JAKOBSPARK_FLOORPLANS,
+} from '@/lib/jakobspark-content';
 import { useMemo } from 'react';
 
 export function ApartmentDetailModal() {
@@ -54,6 +58,11 @@ export function ApartmentDetailModal() {
   const status = s.status ?? 'available';
   const statusColor = STATUS_COLORS[status];
   const thumb = s.thumbnailColor ?? '#888';
+
+  // Echtes Wohnungs-Bild von jakobspark.swiss (falls verfügbar)
+  const isJakobspark = /Jakobspark|Rorschach/i.test(projectName);
+  const apartmentImage = isJakobspark ? JAKOBSPARK_APARTMENT_IMAGES[apt.name] : undefined;
+  const floorplanPdf = isJakobspark ? JAKOBSPARK_FLOORPLANS[apt.name] : undefined;
 
   function close() {
     setSelected(null);
@@ -104,9 +113,11 @@ export function ApartmentDetailModal() {
 
         <div
           className="apt-modal-hero"
-          style={{
-            background: `linear-gradient(135deg, ${thumb} 0%, ${thumb}cc 60%, ${thumb}88 100%)`,
-          }}
+          style={
+            apartmentImage
+              ? { backgroundImage: `url(${apartmentImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+              : { background: `linear-gradient(135deg, ${thumb} 0%, ${thumb}cc 60%, ${thumb}88 100%)` }
+          }
         >
           <div className="apt-modal-hero-meta">
             {s.areaSqm !== undefined && (
@@ -131,13 +142,25 @@ export function ApartmentDetailModal() {
         </div>
 
         <div className="apt-modal-actions">
-          <button
-            className="apt-modal-btn"
-            onClick={() => alert('Grundriss-PDF folgt in nächster Version')}
-          >
-            <span className="apt-modal-btn-icon">📐</span>
-            <span>Grundriss</span>
-          </button>
+          {floorplanPdf ? (
+            <a
+              className="apt-modal-btn"
+              href={floorplanPdf}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="apt-modal-btn-icon">📐</span>
+              <span>Grundriss</span>
+            </a>
+          ) : (
+            <button
+              className="apt-modal-btn"
+              onClick={() => alert('Grundriss-PDF folgt in nächster Version')}
+            >
+              <span className="apt-modal-btn-icon">📐</span>
+              <span>Grundriss</span>
+            </button>
+          )}
           <button
             className="apt-modal-btn"
             onClick={() => alert('Baubeschrieb folgt in nächster Version')}

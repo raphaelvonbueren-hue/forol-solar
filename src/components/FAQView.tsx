@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useProjectStore } from '@/lib/store';
+import { JAKOBSPARK_DOCS } from '@/lib/jakobspark-content';
 
 const FAQS = [
   {
@@ -25,6 +27,8 @@ const FAQS = [
 
 export function FAQView() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
+  const location = useProjectStore((s) => s.location);
+  const isJakobspark = /Jakobspark|Rorschach/i.test(location.label);
 
   function handleContact() {
     window.location.href = 'mailto:vertrieb@forol.ch?subject=Anfrage%20Jakobspark';
@@ -59,15 +63,46 @@ export function FAQView() {
 
       <div className="faq-downloads">
         <div className="faq-downloads-title">Downloads</div>
-        <button className="faq-download" onClick={() => alert('Verkaufsdokumentation folgt')}>
-          📄 Verkaufsdokumentation (PDF)
-        </button>
-        <button className="faq-download" onClick={() => alert('Baubeschrieb folgt')}>
-          📄 Baubeschrieb (PDF)
-        </button>
-        <button className="faq-download" onClick={() => alert('Preisliste folgt')}>
-          📄 Preisliste (PDF)
-        </button>
+        {isJakobspark ? (
+          <>
+            <a
+              href={JAKOBSPARK_DOCS.Stockwerkplaene}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="faq-download"
+            >
+              📄 Stockwerkpläne (PDF)
+            </a>
+            <a
+              href={JAKOBSPARK_DOCS.Ablauf}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="faq-download"
+            >
+              📄 Ablauf Jakobspark Rorschach (PDF)
+            </a>
+            <a
+              href={JAKOBSPARK_DOCS.Gewerbe}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="faq-download"
+            >
+              📄 Gewerbe-Grundriss (PDF)
+            </a>
+          </>
+        ) : (
+          <>
+            <button className="faq-download" onClick={() => alert('Verkaufsdokumentation folgt')}>
+              📄 Verkaufsdokumentation (PDF)
+            </button>
+            <button className="faq-download" onClick={() => alert('Baubeschrieb folgt')}>
+              📄 Baubeschrieb (PDF)
+            </button>
+            <button className="faq-download" onClick={() => alert('Preisliste folgt')}>
+              📄 Preisliste (PDF)
+            </button>
+          </>
+        )}
       </div>
 
       <button className="faq-contact-cta" onClick={handleContact}>
