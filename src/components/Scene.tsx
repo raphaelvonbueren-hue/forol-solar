@@ -102,14 +102,9 @@ export function Scene() {
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
-    // Default-Kameraposition: Süd-Ost. Für Jakobspark setzen wir sie weiter südlich
-    // und höher, damit beim Init das gesamte Gebäude UND der Bodensee nördlich
-    // gleichzeitig im Sichtfeld sind.
-    if (/Jakobspark|Rorschach/i.test(location.label)) {
-      camera.position.set(45, 60, 90); // südlicher und höher
-    } else {
-      camera.position.set(60, 50, 60);
-    }
+    // Default-Kameraposition: Süd-Ost. Wird projekt-spezifisch im
+    // separaten Effect angepasst sobald location geladen ist.
+    camera.position.set(60, 50, 60);
     cameraRef.current = camera;
 
     const controls = new OrbitControls(camera, canvasRef.current);
@@ -152,13 +147,6 @@ export function Scene() {
 
     // N/S/O/W-Labels
     addCompassLabels(scene);
-
-    // Bodensee + "See"-Beschriftung NUR für Jakobspark anzeigen
-    // (Trigger: Location-Label enthält "Jakobspark" oder "Rorschach")
-    const isJakobspark = /Jakobspark|Rorschach/i.test(location.label);
-    if (isJakobspark) {
-      addLakeBackdrop(scene);
-    }
 
     const buildingGroup = new THREE.Group();
     const neighborsGroup = new THREE.Group();
@@ -208,6 +196,39 @@ export function Scene() {
       renderer.dispose();
     };
   }, []);
+
+  // Project-spezifische Szene-Anpassungen (Bodensee, Kamera-Position)
+  // reagiert auf location.label, da location async aus der DB geladen wird.
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const camera = cameraRef.current;
+    if (!scene || !camera) return;
+
+    const isJakobspark = /Jakobspark|Rorschach/i.test(location.label);
+
+    // Alte Lake-Objekte entfernen (Tag: 'lakeBackdrop')
+    const toRemove: THREE.Object3D[] = [];
+    scene.traverse((obj) => {
+      if (obj.userData?.lakeBackdrop) toRemove.push(obj);
+    });
+    toRemove.forEach((obj) => {
+      scene.remove(obj);
+      disposeObject3D(obj);
+    });
+
+    if (isJakobspark) {
+      addLakeBackdrop(scene);
+      // Kamera in Jakobspark-Position bringen, falls noch in Default-Position
+      // (Bei initialem Laden — Nutzer-Manipulationen NICHT überschreiben)
+      const isDefault = Math.abs(camera.position.x - 60) < 0.5
+        && Math.abs(camera.position.y - 50) < 0.5
+        && Math.abs(camera.position.z - 60) < 0.5;
+      if (isDefault) {
+        camera.position.set(45, 60, 90);
+        controlsRef.current?.update();
+      }
+    }
+  }, [location.label]);
 
   // Building (Box / Polygon / Upload) synchronisieren
   useEffect(() => {
@@ -768,6 +789,9 @@ function addCompassLabels(scene: THREE.Scene) {
  * Bodensee-Ufer beginnt ca. 15m nördlich der Anlage (-Z=-25).
  */
 function addLakeBackdrop(scene: THREE.Scene) {
+  // Helfer: Mesh als Lake-Backdrop markieren für späteres Cleanup
+  const tag = (obj: THREE.Object3D) => { obj.userData.lakeBackdrop = true; };
+
   // Sand-/Ufer-Streifen direkt nördlich der Anlage (zwischen Anlage und Wasser)
   // Beginnt ca. 15m nördlich der Anlage und ist 15m breit
   const shoreGeom = new THREE.PlaneGeometry(400, 15);
@@ -778,6 +802,7 @@ function addLakeBackdrop(scene: THREE.Scene) {
   const shore = new THREE.Mesh(shoreGeom, shoreMat);
   shore.rotation.x = -Math.PI / 2;
   shore.position.set(0, 0.04, -32);
+  tag(shore);
   scene.add(shore);
 
   // Wasser-Plane: blau, leicht über Ground-Niveau, beginnt nördlich vom Ufer-Streifen
@@ -793,6 +818,7 @@ function addLakeBackdrop(scene: THREE.Scene) {
   water.rotation.x = -Math.PI / 2;
   water.position.set(0, 0.045, -340);
   water.receiveShadow = true;
+  tag(water);
   scene.add(water);
 
   // "BODENSEE"-Beschriftung — groß, auf der Wasseroberfläche, gut sichtbar
@@ -818,6 +844,7 @@ function addLakeBackdrop(scene: THREE.Scene) {
     );
     plane.rotation.x = -Math.PI / 2;
     plane.position.set(x, 0.08, z);
+    tag(plane);
     scene.add(plane);
   }
   // BODENSEE-Label sichtbar nahe der Anlage (ca. 90m nördlich)
@@ -844,6 +871,7 @@ function addLakeBackdrop(scene: THREE.Scene) {
     );
     wave.rotation.x = -Math.PI / 2;
     wave.position.set(-50 + i * 50, 0.06, -150 - i * 40);
+    tag(wave);
     scene.add(wave);
   }
 }
