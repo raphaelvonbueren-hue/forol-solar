@@ -20,6 +20,10 @@ export function ApartmentDetailModal() {
   const lat = useProjectStore((s) => s.location.lat);
   const lon = useProjectStore((s) => s.location.lon);
   const dateTime = useProjectStore((s) => s.dateTime);
+  const setDateTime = useProjectStore((s) => s.setDateTime);
+
+  // Aktuelle Stunde der globalen Zeit (für Highlight in der Sun-Bar)
+  const currentHour = Math.floor(dateTime.localMinutes / 60);
 
   const all = useMemo(() => flattenSalesApartments(massings), [massings]);
   const apt = useMemo(() => all.find((a) => a.id === selectedId), [all, selectedId]);
@@ -162,16 +166,32 @@ export function ApartmentDetailModal() {
               </div>
             </div>
             <div className="apt-modal-sun-bar">
-              {sunResult.hourly.map((h) => (
-                <div
-                  key={h.hour}
-                  className={`apt-modal-sun-hour ${h.sunny ? 'sunny' : 'shaded'}`}
-                  style={{ opacity: h.sunny ? 0.4 + h.intensity * 0.6 : 0.18 }}
-                  title={`${String(h.hour).padStart(2, '0')}:00 — ${h.sunny ? `Sonne (${Math.round(h.intensity * 100)}%)` : 'Schatten'}`}
-                >
-                  <div className="apt-modal-sun-hour-lbl">{h.hour}</div>
-                </div>
-              ))}
+              {sunResult.hourly.map((h) => {
+                const isCurrent = h.hour === currentHour;
+                return (
+                  <button
+                    key={h.hour}
+                    type="button"
+                    className={`apt-modal-sun-hour ${h.sunny ? 'sunny' : 'shaded'} ${isCurrent ? 'current' : ''}`}
+                    style={{ opacity: h.sunny ? 0.4 + h.intensity * 0.6 : 0.18 }}
+                    title={`${String(h.hour).padStart(2, '0')}:00 — ${h.sunny ? `Sonne (${Math.round(h.intensity * 100)}%)` : 'Schatten'} · klicken zum Springen`}
+                    onClick={() => setDateTime({ localMinutes: h.hour * 60 })}
+                  >
+                    <div className="apt-modal-sun-hour-lbl">{h.hour}</div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="apt-modal-sun-now">
+              Aktuell: <strong>{String(currentHour).padStart(2, '0')}:00</strong>
+              {' · '}
+              <button
+                type="button"
+                className="apt-modal-sun-reset"
+                onClick={() => setDateTime({ localMinutes: 12 * 60 })}
+              >
+                Mittag
+              </button>
             </div>
             {sunResult.bestHourRange && (
               <div className="apt-modal-sun-meta">
