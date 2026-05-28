@@ -103,7 +103,7 @@ export function Scene() {
     scene.fog = new THREE.Fog(0xB8D4E8, 300, 800);
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000000);
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
     // Default-Kameraposition: Süd-Ost. Wird projekt-spezifisch im
     // separaten Effect angepasst sobald location geladen ist.
     camera.position.set(60, 50, 60);
