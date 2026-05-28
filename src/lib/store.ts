@@ -99,6 +99,10 @@ interface ProjectState {
   uiMode: 'sales' | 'editor';
   setUiMode: (m: 'sales' | 'editor') => void;
 
+  // Sales-View Tab (innerhalb sales mode): Beyonity-style Tabs
+  salesView: 'projekt' | 'angebot' | 'umgebung' | 'galerie' | 'faq';
+  setSalesView: (v: 'projekt' | 'angebot' | 'umgebung' | 'galerie' | 'faq') => void;
+
   // Persistenz
   exportProject: () => Project;
   importProject: (project: Project) => void;
@@ -285,6 +289,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
   uiMode: 'sales',
   setUiMode: (uiMode) => set({ uiMode }),
+
+  salesView: 'angebot',
+  setSalesView: (salesView) => set({ salesView }),
 
   exportProject: () => {
     const s = get();

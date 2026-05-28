@@ -31,6 +31,17 @@ export function SalesFilters() {
     filter.minPrice !== null || filter.maxPrice !== null ||
     filter.floorLabels.length > 0;
 
+  // "Nur verfügbar" Toggle: statusFilter = ['available'] only
+  const onlyAvailable =
+    filter.statusFilter.length === 1 && filter.statusFilter[0] === 'available';
+  function toggleOnlyAvailable() {
+    if (onlyAvailable) {
+      setFilter({ statusFilter: ['available', 'reserved', 'sold'] });
+    } else {
+      setFilter({ statusFilter: ['available'] });
+    }
+  }
+
   function toggleStatus(s: ApartmentStatus) {
     if (filter.statusFilter.includes(s)) {
       setFilter({ statusFilter: filter.statusFilter.filter((x) => x !== s) });
@@ -48,6 +59,13 @@ export function SalesFilters() {
 
   return (
     <div className="sales-filters">
+      <button
+        className={`only-available-toggle ${onlyAvailable ? 'on' : ''}`}
+        onClick={toggleOnlyAvailable}
+      >
+        <span className="only-available-dot" />
+        Nur verfügbare Objekte
+      </button>
       <div className="sales-filters-row">
         {STATUSES.map((s) => (
           <button

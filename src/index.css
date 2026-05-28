@@ -1238,3 +1238,388 @@ input:focus, select:focus { outline: none; border-color: var(--forol-red); }
 }
 .cs-swatch.sunny { background: linear-gradient(180deg, #F5C842 0%, #E8A030 100%); }
 .cs-swatch.shaded { background: #6B7280; }
+
+/* ============================================================
+   Sprint 1: Beyonity-Parity UX
+   ============================================================ */
+
+/* TOP-NAV (5 Tabs: Projekt | Angebot | Umgebung | Galerie | FAQ) */
+.sales-topnav {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sales-topnav-inner {
+  display: flex;
+  align-items: stretch;
+  padding: 0 18px;
+  gap: 8px;
+  overflow-x: auto;
+}
+.topnav-tab {
+  background: transparent;
+  border: none;
+  padding: 14px 4px;
+  margin: 0 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gray);
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+  transition: color 0.15s;
+}
+.topnav-tab:first-child { margin-left: 0; }
+.topnav-tab:hover { color: var(--dark); }
+.topnav-tab.active {
+  color: var(--forol-red);
+  font-weight: 600;
+}
+.topnav-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--forol-red);
+}
+
+/* OVERVIEW-BOX (prominente "X/Y verfügbar"-Box) */
+.sales-address {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.sales-overview-box {
+  margin: 14px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.sales-overview-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.sales-overview-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dark);
+  letter-spacing: -0.01em;
+}
+.sales-overview-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  background: var(--forol-red);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.sales-overview-num {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.sales-overview-of {
+  font-size: 13px;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+.sales-overview-txt {
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sales-overview-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sales-overview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.sales-overview-row-lbl {
+  font-size: 11px;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.sales-overview-row-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+
+/* NUR-VERFÜGBAR Toggle */
+.only-available-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--gray);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 8px;
+}
+.only-available-toggle:hover { border-color: var(--gray-light); }
+.only-available-toggle.on {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+.only-available-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gray-light);
+}
+.only-available-toggle.on .only-available-dot { background: white; }
+
+/* PLACEHOLDER (Projekt/Umgebung/Galerie/FAQ Tab content) */
+.sales-placeholder {
+  padding: 60px 32px;
+  text-align: center;
+  color: var(--gray);
+}
+.sales-placeholder-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+.sales-placeholder-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--gray);
+}
+
+/* APARTMENT DETAIL MODAL */
+.apt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: aptmodal-fade 0.2s ease-out;
+}
+@keyframes aptmodal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.apt-modal {
+  background: var(--white);
+  border-radius: 12px;
+  max-width: 520px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  animation: aptmodal-slide 0.25s ease-out;
+}
+@keyframes aptmodal-slide {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.apt-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.9);
+  color: var(--dark);
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.apt-modal-close:hover { background: white; }
+.apt-modal-header {
+  padding: 20px 24px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.apt-modal-floor {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray);
+  background: var(--bg);
+  padding: 3px 8px;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.apt-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.02em;
+}
+.apt-modal-subtitle {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.apt-modal-status {
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.apt-modal-hero {
+  height: 160px;
+  margin: 0 24px;
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 16px;
+}
+.apt-modal-hero-meta {
+  display: flex;
+  gap: 18px;
+  background: rgba(255,255,255,0.92);
+  padding: 10px 14px;
+  border-radius: 6px;
+}
+.apt-modal-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.apt-modal-meta-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.apt-modal-meta-lbl {
+  font-size: 9px;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.apt-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 16px 24px 8px;
+}
+.apt-modal-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--dark);
+  transition: all 0.15s;
+}
+.apt-modal-btn:hover {
+  border-color: var(--forol-red);
+  color: var(--forol-red);
+}
+.apt-modal-btn-icon { font-size: 20px; }
+.apt-modal-data {
+  margin: 8px 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.apt-modal-data-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.apt-modal-data-lbl { color: var(--gray); }
+.apt-modal-data-val {
+  font-weight: 600;
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+}
+.apt-modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 14px 24px 20px;
+  align-items: center;
+}
+.apt-modal-secondary {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--dark);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.apt-modal-secondary:hover { border-color: var(--gray-light); }
+.apt-modal-cta {
+  flex: 1;
+  padding: 12px 20px;
+  background: var(--forol-red);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.apt-modal-cta:hover { opacity: 0.92; }
+.apt-modal-cta:active { transform: scale(0.98); }
+
+@media (max-width: 1000px) {
+  .apt-modal { max-height: 80vh; }
+  .apt-modal-actions { grid-template-columns: 1fr; }
+}
