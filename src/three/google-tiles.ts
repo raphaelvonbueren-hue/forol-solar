@@ -50,9 +50,11 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
   const tiles = new TilesRenderer();
 
   // Aggressives Tile-Loading für sichtbares Resultat
-  tiles.errorTarget = 12;       // Default ist meist 6 — höher = weniger Detail aber schnelleres Loading
-  tiles.displayActiveTiles = true;  // Auch nicht-aktive Tiles anzeigen wenn sie geladen sind
-  tiles.loadSiblings = true;    // Geschwister-Tiles vorladen für smootheres Erlebnis
+  tiles.errorTarget = 2;        // Sehr aggressiv: kleine Pixel-Fehler-Toleranz erzwingt Detail-Tiles
+  tiles.errorThreshold = 60;    // Großer Threshold → Tiles werden auch geladen wenn Camera weit weg
+  tiles.maxDepth = Infinity;    // Keine Tiefenbegrenzung
+  tiles.displayActiveTiles = true;
+  tiles.loadSiblings = true;
 
   // Auth-Plugin: API-Token für Google Cloud
   tiles.registerPlugin(
