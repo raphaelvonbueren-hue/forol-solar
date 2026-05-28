@@ -92,18 +92,37 @@ export async function fetchOSMBuildings(
     out skel qt;
   `.trim();
 
-  const url = 'https://overpass-api.de/api/interpreter';
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'data=' + encodeURIComponent(query),
-  });
+  // Fallback-Reihenfolge: Hauptserver, Mirror DE, Mirror FR
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter',
+  ];
 
-  if (!res.ok) {
-    throw new Error(`Overpass API ${res.status}: ${res.statusText}`);
+  let data: OverpassResponse | null = null;
+  let lastError: Error | null = null;
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(query),
+      });
+      if (!res.ok) {
+        lastError = new Error(`${url} → ${res.status} ${res.statusText}`);
+        continue;
+      }
+      data = await res.json();
+      break;
+    } catch (e) {
+      lastError = e as Error;
+      continue;
+    }
   }
 
-  const data: OverpassResponse = await res.json();
+  if (!data) {
+    throw lastError ?? new Error('Alle Overpass-Endpoints fehlgeschlagen');
+  }
   const nodes = new Map<number, { lat: number; lon: number }>();
   const ways: OverpassWay[] = [];
   for (const el of data.elements) {

@@ -330,6 +330,10 @@ export function Scene() {
         if (mesh) group.add(mesh);
       }
     }
+    // Admin-Drehen-Tool: Zusätzliche Rotation + Translation auf der ganzen Anlage
+    const rotDeg = location.rotationDeg ?? 0;
+    group.rotation.y = (rotDeg * Math.PI) / 180;
+    group.position.set(location.offsetX ?? 0, 0, location.offsetZ ?? 0);
   }, [buildingMode, box, massings, location]);
 
   // Modell-Upload
