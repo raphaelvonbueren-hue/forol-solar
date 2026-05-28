@@ -8,6 +8,10 @@ import {
 } from '@/lib/apartment-selectors';
 import { ApartmentCard } from './ApartmentCard';
 import { SalesFilters } from './SalesFilters';
+import { ProjektView } from './ProjektView';
+import { UmgebungView } from './UmgebungView';
+import { GalerieView } from './GalerieView';
+import { FAQView } from './FAQView';
 
 export function SalesSidebar() {
   const massings = useProjectStore((s) => s.massings);
@@ -36,33 +40,32 @@ export function SalesSidebar() {
     );
   }
 
-  // VIEW-Routing: nur Angebot zeigt aktuelle Wohnungsliste, andere zeigen Placeholder
-  if (view !== 'angebot') {
+  // VIEW-Routing: jeder Tab hat seinen eigenen Inhalt
+  if (view === 'projekt') {
     return (
       <aside className="sales-sidebar">
-        <div className="sales-header">
-          <div className="sales-title">
-            {view === 'projekt' && 'Projekt'}
-            {view === 'umgebung' && 'Umgebung'}
-            {view === 'galerie' && 'Galerie'}
-            {view === 'faq' && 'FAQ & Downloads'}
-          </div>
-          <div className="sales-address">{projectName}</div>
-        </div>
-        <div className="sales-placeholder">
-          <div className="sales-placeholder-icon">
-            {view === 'projekt' && '🏠'}
-            {view === 'umgebung' && '🗺️'}
-            {view === 'galerie' && '🖼️'}
-            {view === 'faq' && '📋'}
-          </div>
-          <div className="sales-placeholder-text">
-            {view === 'projekt' && 'Projekt-Übersicht mit Hero-Rendering folgt in nächster Version.'}
-            {view === 'umgebung' && 'Umgebungs-Karte mit POI (Schule, Bus, Bahnhof, Bodensee-Promenade) folgt in nächster Version.'}
-            {view === 'galerie' && 'Bildergalerie folgt in nächster Version.'}
-            {view === 'faq' && 'FAQ und Download-Bereich folgt in nächster Version.'}
-          </div>
-        </div>
+        <ProjektView />
+      </aside>
+    );
+  }
+  if (view === 'umgebung') {
+    return (
+      <aside className="sales-sidebar">
+        <UmgebungView />
+      </aside>
+    );
+  }
+  if (view === 'galerie') {
+    return (
+      <aside className="sales-sidebar">
+        <GalerieView />
+      </aside>
+    );
+  }
+  if (view === 'faq') {
+    return (
+      <aside className="sales-sidebar">
+        <FAQView />
       </aside>
     );
   }
