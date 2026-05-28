@@ -141,10 +141,12 @@ export function Scene() {
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
+    ground.userData.isGroundPlane = true;
     scene.add(ground);
 
     const grid = new THREE.GridHelper(400, 40, 0x999999, 0xCCCCCC);
     grid.position.y = 0.02;
+    grid.userData.isGroundGrid = true;
     scene.add(grid);
 
     // N/S/O/W-Labels
@@ -241,6 +243,22 @@ export function Scene() {
 
       // Phase 2: Google Photorealistic 3D Tiles laden (falls API Key vorhanden)
       const apiKey = getGoogleApiKey();
+
+      // Ground/Grid sichtbar oder unsichtbar je nach Tile-Verfügbarkeit
+      const groundMesh = scene.children.find((o) => o.userData?.isGroundPlane) as
+        THREE.Mesh | undefined;
+      const groundGrid = scene.children.find((o) => o.userData?.isGroundGrid) as
+        THREE.Object3D | undefined;
+      if (apiKey) {
+        // Tiles aktiv: Ground unsichtbar (verdeckt sonst die Google-Tiles)
+        if (groundMesh) groundMesh.visible = false;
+        if (groundGrid) groundGrid.visible = false;
+      } else {
+        // Kein API Key: Ground sichtbar lassen (Default)
+        if (groundMesh) groundMesh.visible = true;
+        if (groundGrid) groundGrid.visible = true;
+      }
+
       if (apiKey) {
         try {
           googleTilesRef.current = initGoogleTiles({
@@ -255,6 +273,14 @@ export function Scene() {
           console.warn('[Scene] Google 3D Tiles konnten nicht geladen werden:', e);
         }
       }
+    } else {
+      // Nicht-Jakobspark: Ground/Grid sichtbar lassen
+      const groundMesh = scene.children.find((o) => o.userData?.isGroundPlane) as
+        THREE.Mesh | undefined;
+      const groundGrid = scene.children.find((o) => o.userData?.isGroundGrid) as
+        THREE.Object3D | undefined;
+      if (groundMesh) groundMesh.visible = true;
+      if (groundGrid) groundGrid.visible = true;
     }
   }, [location.label, location.lat, location.lon]);
 

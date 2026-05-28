@@ -102,8 +102,7 @@ export function initGoogleTiles(opts: GoogleTilesOptions): GoogleTilesHandle {
 
   // Tag für Cleanup
   tiles.group.userData.googleTiles = true;
-  // Im Hintergrund rendern (hinter eigenem Gebäude)
-  tiles.group.renderOrder = -1;
+  // renderOrder NICHT setzen (default 0) — Tiles werden mit normalem Z-Order gerendert
   scene.add(tiles.group);
 
   // Initial-Update sofort triggern
