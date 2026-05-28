@@ -14,6 +14,7 @@ import {
 } from '@/lib/heatmap-compute';
 import { computeShadowAnalysis } from '@/three/heatmap';
 import { initGoogleTiles, getGoogleApiKey, type GoogleTilesHandle } from '@/three/google-tiles';
+import { fetchOSMBuildings, type OSMBuilding } from '@/lib/osm-buildings';
 import type { ApartmentResult } from '@/types';
 import { TimeBar } from './TimeBar';
 
@@ -241,6 +242,17 @@ export function Scene() {
         controlsRef.current?.update();
       }
 
+      // OSM-Nachbargebäude laden (async)
+      removeOSMBuildings(scene);
+      fetchOSMBuildings(location.lat, location.lon, 250, true)
+        .then((buildings) => {
+          addOSMBuildings(scene, buildings);
+          console.log(`[Scene] ${buildings.length} OSM-Nachbargebäude geladen`);
+        })
+        .catch((e) => {
+          console.warn('[Scene] OSM-Buildings konnten nicht geladen werden:', e.message);
+        });
+
       // Phase 2: Google Photorealistic 3D Tiles laden (falls API Key vorhanden)
       const apiKey = getGoogleApiKey();
 
@@ -286,6 +298,7 @@ export function Scene() {
       }
     } else {
       // Nicht-Jakobspark: Ground/Grid sichtbar lassen, camera far default
+      removeOSMBuildings(scene);
       const groundMesh = scene.children.find((o) => o.userData?.isGroundPlane) as
         THREE.Mesh | undefined;
       const groundGrid = scene.children.find((o) => o.userData?.isGroundGrid) as
@@ -1067,4 +1080,67 @@ function addLakeBackdrop(scene: THREE.Scene) {
   }
   mkSmallLabel('Kornhaus', 75, 25, -8, 3.5);
   mkSmallLabel('Jakobstrasse →', 0, 6, 22, 4);
+}
+
+/**
+ * Rendert OSM-Nachbargebäude als graue Extrude-Geometrien in die Szene.
+ * Jedes Building bekommt userData.osmBuilding=true für späteres dispose.
+ */
+function addOSMBuildings(scene: THREE.Scene, buildings: OSMBuilding[]) {
+  const buildingMat = new THREE.MeshStandardMaterial({
+    color: 0xC8C2B8,
+    roughness: 0.85,
+    metalness: 0.05,
+  });
+  const edgeMat = new THREE.LineBasicMaterial({ color: 0x888080, opacity: 0.7, transparent: true });
+
+  for (const b of buildings) {
+    if (b.outline.length < 3) continue;
+    try {
+      const shape = new THREE.Shape();
+      shape.moveTo(b.outline[0].x, b.outline[0].z);
+      for (let i = 1; i < b.outline.length; i++) {
+        shape.lineTo(b.outline[i].x, b.outline[i].z);
+      }
+      shape.closePath();
+
+      const geom = new THREE.ExtrudeGeometry(shape, {
+        depth: b.height,
+        bevelEnabled: false,
+      });
+      // Extrude legt entlang +Z aus — wir rotieren so dass die Höhe entlang +Y ist
+      geom.rotateX(-Math.PI / 2);
+
+      const mesh = new THREE.Mesh(geom, buildingMat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData.osmBuilding = true;
+      mesh.userData.osmId = b.id;
+      scene.add(mesh);
+
+      // Edge-Lines on top für mehr Kontur-Definition
+      const edges = new THREE.EdgesGeometry(geom);
+      const lines = new THREE.LineSegments(edges, edgeMat);
+      lines.userData.osmBuilding = true;
+      scene.add(lines);
+    } catch (e) {
+      console.warn(`[OSM] Building ${b.id} konnte nicht gerendert werden:`, e);
+    }
+  }
+}
+
+/** Entfernt alle OSM-Buildings aus der Szene und disposed Geometrien. */
+function removeOSMBuildings(scene: THREE.Scene) {
+  const toRemove: THREE.Object3D[] = [];
+  scene.traverse((obj) => {
+    if (obj.userData?.osmBuilding) toRemove.push(obj);
+  });
+  for (const o of toRemove) {
+    scene.remove(o);
+    if (o instanceof THREE.Mesh) {
+      o.geometry.dispose();
+    } else if (o instanceof THREE.LineSegments) {
+      o.geometry.dispose();
+    }
+  }
 }

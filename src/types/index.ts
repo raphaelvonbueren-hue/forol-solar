@@ -11,6 +11,12 @@ export interface Location {
   lat: number;
   lon: number;
   label: string;
+  /** Rotation der Anlage in Grad (Z-Achse), für Eindrehen auf Parzelle. Default 0. */
+  rotationDeg?: number;
+  /** Translation der Anlage in lokalen Metern (Ost-Verschiebung). Default 0. */
+  offsetX?: number;
+  /** Translation der Anlage in lokalen Metern (Süd-Verschiebung). Default 0. */
+  offsetZ?: number;
 }
 
 /** Datum und Tageszeit in Schweizer Lokalzeit. */

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import { useProjectStore } from '@/lib/store';
+import { fetchOSMBuildings } from '@/lib/osm-buildings';
 
 interface POI {
   name: string;
@@ -103,6 +104,31 @@ export function UmgebungView() {
         .addTo(m)
         .bindTooltip(`${poi.name} · ${formatDist(poi.dist)}`, { permanent: false });
     }
+
+    // OSM-Buildings als graue Polygone einblenden (Nachbargebäude)
+    fetchOSMBuildings(location.lat, location.lon, 250, true)
+      .then((buildings) => {
+        const R = 6371000;
+        const cosLat = Math.cos((location.lat * Math.PI) / 180);
+        for (const b of buildings) {
+          const latLngs: L.LatLngExpression[] = b.outline.map((p) => {
+            const dLat = -p.z / R;
+            const dLon = p.x / (R * cosLat);
+            return [
+              location.lat + (dLat * 180) / Math.PI,
+              location.lon + (dLon * 180) / Math.PI,
+            ];
+          });
+          L.polygon(latLngs, {
+            color: '#444',
+            weight: 1,
+            fillColor: '#888',
+            fillOpacity: 0.35,
+            interactive: false,
+          }).addTo(m);
+        }
+      })
+      .catch((e) => console.warn('[UmgebungView] OSM-Buildings konnten nicht geladen werden:', e.message));
 
     mapRef.current = m;
 
