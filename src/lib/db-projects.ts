@@ -12,6 +12,7 @@ import type { DbProject, DbApartment, DbInquiryInput } from './db-types';
 import { dbApartmentToSales } from './db-types';
 import { autoSplitMassing } from './apartments';
 import { createCH144Demo } from './demo-ch144';
+import { createJakobsparkDemo } from './demo-jakobspark';
 
 /**
  * Wenn das geometry_json `useCodeFallback: true` gesetzt hat, holen wir die
@@ -22,7 +23,12 @@ function resolveGeometry(slug: string, geometryJson: Record<string, unknown>): O
   if (geometryJson?.useCodeFallback === true) {
     if (slug === 'ch144') {
       const demo = createCH144Demo();
-      // Location wird vom DB-Eintrag überschrieben — Rest übernehmen
+      const { location: _l, ...rest } = demo;
+      void _l;
+      return rest;
+    }
+    if (slug === 'jakobspark') {
+      const demo = createJakobsparkDemo();
       const { location: _l, ...rest } = demo;
       void _l;
       return rest;

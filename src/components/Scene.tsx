@@ -146,6 +146,13 @@ export function Scene() {
     // N/S/O/W-Labels
     addCompassLabels(scene);
 
+    // Bodensee + "See"-Beschriftung NUR für Jakobspark anzeigen
+    // (Trigger: Location-Label enthält "Jakobspark" oder "Rorschach")
+    const isJakobspark = /Jakobspark|Rorschach/i.test(location.label);
+    if (isJakobspark) {
+      addLakeBackdrop(scene);
+    }
+
     const buildingGroup = new THREE.Group();
     const neighborsGroup = new THREE.Group();
     const subzoneGroup = new THREE.Group();
@@ -742,4 +749,68 @@ function addCompassLabels(scene: THREE.Scene) {
   mkText('S', 0, 180, '#666666');
   mkText('O', 180, 0, '#666666');
   mkText('W', -180, 0, '#666666');
+}
+
+/**
+ * Bodensee-Backdrop für Jakobspark: blaue Wasser-Fläche nördlich der Anlage
+ * plus große "BODENSEE"-Beschriftung — damit Kunden sofort die Orientierung haben.
+ * Der Bodensee liegt ca. 30-50m nördlich der Jakobstrasse 90.
+ */
+function addLakeBackdrop(scene: THREE.Scene) {
+  // Wasser-Plane: groß, blau, halbtransparent, leicht über Ground-Niveau
+  // Position: nördlich der Anlage (negative Z im Three-Koord-System)
+  // Größe: 600m breit × 400m tief — deckt den gesamten sichtbaren Bereich nördlich ab
+  const waterGeom = new THREE.PlaneGeometry(600, 400);
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x3E7CB1,        // Bodensee-Blau
+    roughness: 0.4,
+    metalness: 0.3,
+    transparent: true,
+    opacity: 0.85,
+  });
+  const water = new THREE.Mesh(waterGeom, waterMat);
+  water.rotation.x = -Math.PI / 2;
+  // Zentrum 230m nördlich vom Origin, knapp über Ground (verhindert Z-Fighting)
+  water.position.set(0, 0.04, -230);
+  water.receiveShadow = true;
+  scene.add(water);
+
+  // Sand-/Ufer-Streifen (schmal): zwischen Anlage und See für visuellen Übergang
+  const shoreGeom = new THREE.PlaneGeometry(600, 25);
+  const shoreMat = new THREE.MeshStandardMaterial({
+    color: 0xE8DCC4,        // sandiger Beigeton
+    roughness: 1.0,
+  });
+  const shore = new THREE.Mesh(shoreGeom, shoreMat);
+  shore.rotation.x = -Math.PI / 2;
+  shore.position.set(0, 0.045, -42);
+  scene.add(shore);
+
+  // "BODENSEE"-Beschriftung — groß, auf der Wasseroberfläche
+  function mkLakeLabel(text: string, x: number, z: number, sizeM: number) {
+    const cvs = document.createElement('canvas');
+    cvs.width = 1024; cvs.height = 256;
+    const c = cvs.getContext('2d')!;
+    c.clearRect(0, 0, cvs.width, cvs.height);
+    c.fillStyle = '#FFFFFF';
+    c.strokeStyle = 'rgba(30, 60, 90, 0.5)';
+    c.lineWidth = 4;
+    c.font = 'bold 130px Inter, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.strokeText(text, 512, 128);
+    c.fillText(text, 512, 128);
+    const tex = new THREE.CanvasTexture(cvs);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const aspect = cvs.width / cvs.height;
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(sizeM * aspect, sizeM),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }),
+    );
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.set(x, 0.06, z);
+    scene.add(plane);
+  }
+  mkLakeLabel('BODENSEE', 0, -150, 22);
+  mkLakeLabel('↑ Seesicht', 0, -75, 8);
 }

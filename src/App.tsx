@@ -3,12 +3,14 @@ import { Header } from '@/components/Header';
 import { Controls } from '@/components/Controls';
 import { SalesSidebar } from '@/components/SalesSidebar';
 import { ContactButton } from '@/components/ContactButton';
+import { CourtyardSunBar } from '@/components/CourtyardSunBar';
 import { SunBar } from '@/components/SunBar';
 import { Scene } from '@/components/Scene';
 import { StatsBar } from '@/components/StatsBar';
 import { parseUrlParams } from '@/lib/url-params';
 import { useProjectStore } from '@/lib/store';
 import { createCH144Demo } from '@/lib/demo-ch144';
+import { createJakobsparkDemo } from '@/lib/demo-jakobspark';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { fetchProjectBySlug } from '@/lib/db-projects';
 
@@ -44,10 +46,14 @@ export function App() {
           setLoadState('idle');
         })
         .catch((e) => {
-          // Fallback: wenn ?project=ch144 nicht in DB, dann hardcoded laden
+          // Fallback: wenn ?project=X nicht in DB, dann hardcoded Demo laden (für ch144 + jakobspark)
           if (urlParams.project === 'ch144') {
             console.warn('CH144 nicht in DB, lade hardcoded Demo:', e.message);
             importProject(createCH144Demo());
+            setLoadState('idle');
+          } else if (urlParams.project === 'jakobspark') {
+            console.warn('Jakobspark nicht in DB, lade hardcoded Demo:', e.message);
+            importProject(createJakobsparkDemo());
             setLoadState('idle');
           } else {
             setLoadState('error');
@@ -57,9 +63,11 @@ export function App() {
       return;
     }
 
-    // ?demo=ch144 — hardcoded laden (Fallback wenn kein Supabase)
+    // ?demo=ch144 / ?demo=jakobspark — hardcoded laden (Fallback wenn kein Supabase)
     if (urlParams.demo === 'ch144') {
       importProject(createCH144Demo());
+    } else if (urlParams.demo === 'jakobspark') {
+      importProject(createJakobsparkDemo());
     } else if (urlParams.lat !== null && urlParams.lon !== null) {
       setLocation({
         lat: urlParams.lat,
@@ -100,6 +108,7 @@ export function App() {
         <Scene />
         {uiMode === 'sales' && <SunBar />}
         {uiMode === 'sales' && <ContactButton />}
+        {uiMode === 'sales' && <CourtyardSunBar />}
         {loadState === 'loading' && (
           <div className="loading-overlay">
             <div className="loading-spinner" />
