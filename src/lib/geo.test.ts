@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { geoToLocal, localToGeo } from './geo';
+import { geoToLocal, localToGeo, rotateXZ } from './geo';
 
 describe('geoToLocal / localToGeo', () => {
   const origin = { lat: 47.3769, lon: 8.5417 }; // Zürich
@@ -43,5 +43,34 @@ describe('geoToLocal / localToGeo', () => {
     const north = geoToLocal(47.3769 + 10 / 111000, 8.5417, origin);
     const dist = Math.abs(south.z - north.z);
     expect(dist).toBeCloseTo(20, 1);
+  });
+});
+
+describe('rotateXZ', () => {
+  it('Identität bei rad = 0', () => {
+    expect(rotateXZ(3, 5, 0)).toEqual({ x: 3, z: 5 });
+  });
+
+  it('90° dreht +X (Ost) nach -Z (Nord)', () => {
+    const r = rotateXZ(1, 0, Math.PI / 2);
+    expect(r.x).toBeCloseTo(0, 10);
+    expect(r.z).toBeCloseTo(-1, 10);
+  });
+
+  it('90° dreht +Z (Süd) nach +X (Ost)', () => {
+    const r = rotateXZ(0, 1, Math.PI / 2);
+    expect(r.x).toBeCloseTo(1, 10);
+    expect(r.z).toBeCloseTo(0, 10);
+  });
+
+  it('180° invertiert beide Achsen', () => {
+    const r = rotateXZ(2, -3, Math.PI);
+    expect(r.x).toBeCloseTo(-2, 10);
+    expect(r.z).toBeCloseTo(3, 10);
+  });
+
+  it('Rotation erhält die Länge (isometrisch)', () => {
+    const r = rotateXZ(3, 4, 0.7);
+    expect(Math.hypot(r.x, r.z)).toBeCloseTo(5, 10);
   });
 });

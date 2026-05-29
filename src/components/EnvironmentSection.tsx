@@ -10,6 +10,10 @@ export function EnvironmentSection() {
   const setOsmBuildings = useProjectStore((s) => s.setOsmBuildings);
   const neighborGLBFile = useProjectStore((s) => s.neighborGLBFile);
   const setNeighborGLBFile = useProjectStore((s) => s.setNeighborGLBFile);
+  const orientationDeg = useProjectStore((s) => s.orientationDeg);
+  const setOrientationDeg = useProjectStore((s) => s.setOrientationDeg);
+  const aerialGround = useProjectStore((s) => s.aerialGround);
+  const setAerialGround = useProjectStore((s) => s.setAerialGround);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ text: string; kind: 'info' | 'success' | 'error' }>({
@@ -41,6 +45,28 @@ export function EnvironmentSection() {
       <div className="section-title">
         <span className="num">3</span>Umgebung
       </div>
+      <div className="field">
+        <div className="field-label">
+          <span>Ausrichtung</span>
+          <span className="value">{orientationDeg}°</span>
+        </div>
+        <input
+          type="range" min={0} max={359} step={1}
+          value={orientationDeg}
+          onChange={(e) => setOrientationDeg(parseInt(e.target.value, 10))}
+        />
+      </div>
+      <div className="hint">
+        Modell drehen, bis der See im Norden liegt — die Schatten richten sich neu zur Sonne aus.
+      </div>
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          checked={aerialGround}
+          onChange={(e) => setAerialGround(e.target.checked)}
+        />
+        <span>Luftbild als Boden (Swisstopo)</span>
+      </label>
       <div className="btn-row">
         <button className="btn btn-full" onClick={handleLoadOSM} disabled={loading}>
           {loading ? 'Lade …' : 'Nachbarbebauung aus OSM laden'}

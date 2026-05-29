@@ -55,6 +55,12 @@ interface ProjectState {
   neighborGLBFile: File | null;
   setNeighborGLBFile: (f: File | null) => void;
 
+  // Orientierung & Boden
+  orientationDeg: number;
+  setOrientationDeg: (deg: number) => void;
+  aerialGround: boolean;
+  setAerialGround: (v: boolean) => void;
+
   // Analyse-Konfiguration
   analysisConfig: AnalysisConfig;
   setAnalysisConfig: (patch: Partial<AnalysisConfig>) => void;
@@ -244,6 +250,11 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   neighborGLBFile: null,
   setNeighborGLBFile: (neighborGLBFile) => set({ neighborGLBFile }),
 
+  orientationDeg: 0,
+  setOrientationDeg: (orientationDeg) => set({ orientationDeg }),
+  aerialGround: true,
+  setAerialGround: (aerialGround) => set({ aerialGround }),
+
   analysisConfig: { precision: 'medium', sampleSpacing: 1.5 },
   setAnalysisConfig: (patch) =>
     set((s) => ({ analysisConfig: { ...s.analysisConfig, ...patch } })),
@@ -305,6 +316,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       massings: s.massings,
       dateTime: s.dateTime,
       osmRadius: s.osmRadius,
+      orientationDeg: s.orientationDeg,
     };
   },
   importProject: (project) => {
@@ -337,6 +349,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       massings,
       dateTime: project.dateTime,
       osmRadius: project.osmRadius,
+      orientationDeg: project.orientationDeg ?? 0,
       apartmentResults: [],
       heatmapSamples: null,
       heatmapResults: null,
