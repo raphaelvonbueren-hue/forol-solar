@@ -9,3 +9,8 @@ dist/
 .vscode/
 .idea/
 coverage/
+
+# Claude Code – lokale, maschinenspezifische Konfiguration
+# (geteilte Configs wie .claude/settings.json bleiben bewusst committfähig)
+.claude/settings.local.json
+.claude/launch.json
