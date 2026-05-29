@@ -15,6 +15,7 @@ import {
 import { computeShadowAnalysis } from '@/three/heatmap';
 import { initGoogleTiles, getGoogleApiKey, type GoogleTilesHandle } from '@/three/google-tiles';
 import { fetchOSMBuildings, type OSMBuilding } from '@/lib/osm-buildings';
+import { buildSwissimageGround } from '@/lib/swissimage';
 import type { ApartmentResult } from '@/types';
 import { TimeBar } from './TimeBar';
 
@@ -51,10 +52,13 @@ export function Scene() {
   const controlsRef = useRef<OrbitControls | null>(null);
   const sunLightRef = useRef<THREE.DirectionalLight | null>(null);
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+  const worldRootRef = useRef<THREE.Group | null>(null);
   const buildingGroupRef = useRef<THREE.Group | null>(null);
   const neighborsGroupRef = useRef<THREE.Group | null>(null);
   const subzoneGroupRef = useRef<THREE.Group | null>(null);
   const heatmapGroupRef = useRef<THREE.Group | null>(null);
+  const groundRef = useRef<THREE.Mesh | null>(null);
+  const gridRef = useRef<THREE.GridHelper | null>(null);
   const samplesRef = useRef<FacadeSample[] | null>(null);
   const resultsRef = useRef<Float32Array | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -86,6 +90,8 @@ export function Scene() {
   const modelRotation = useProjectStore((s) => s.modelRotation);
   const osmBuildings = useProjectStore((s) => s.osmBuildings);
   const neighborGLBFile = useProjectStore((s) => s.neighborGLBFile);
+  const orientationDeg = useProjectStore((s) => s.orientationDeg);
+  const aerialGround = useProjectStore((s) => s.aerialGround);
   const setHeatmap = useProjectStore((s) => s.setHeatmap);
   const setApartmentResults = useProjectStore((s) => s.setApartmentResults);
   const setModelFile = useProjectStore((s) => s.setModelFile);
@@ -138,26 +144,42 @@ export function Scene() {
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(1000, 1000),
-      new THREE.MeshStandardMaterial({ color: 0xD8D8D2, roughness: 0.95 }),
+      new THREE.MeshStandardMaterial({
+        color: 0xD8D8D2,
+        roughness: 0.95,
+        // Boden leicht nach hinten in der Tiefe → koplanare Overlays (Grid,
+        // Kompass, Subzonen) gewinnen den Depth-Test, kein z-fighting.
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     ground.userData.isGroundPlane = true;
     scene.add(ground);
+    groundRef.current = ground;
 
     const grid = new THREE.GridHelper(400, 40, 0x999999, 0xCCCCCC);
     grid.position.y = 0.02;
     grid.userData.isGroundGrid = true;
     scene.add(grid);
+    gridRef.current = grid;
 
     // N/S/O/W-Labels
     addCompassLabels(scene);
 
+    // worldRoot enthält NUR das Modell (Gebäude + Subzonen + Heatmap) und wird um
+    // orientationDeg gedreht. Nachbarn, Boden, Grid, Kompass und Sonne bleiben im
+    // echten Nord-Frame (Scene-Root), damit die Drehung korrigierend wirkt.
+    const worldRoot = new THREE.Group();
     const buildingGroup = new THREE.Group();
     const neighborsGroup = new THREE.Group();
     const subzoneGroup = new THREE.Group();
     const heatmapGroup = new THREE.Group();
-    scene.add(buildingGroup, neighborsGroup, subzoneGroup, heatmapGroup);
+    worldRoot.add(buildingGroup, subzoneGroup, heatmapGroup);
+    scene.add(worldRoot, neighborsGroup);
+    worldRootRef.current = worldRoot;
     buildingGroupRef.current = buildingGroup;
     neighborsGroupRef.current = neighborsGroup;
     subzoneGroupRef.current = subzoneGroup;
@@ -311,6 +333,59 @@ export function Scene() {
       }
     }
   }, [location.label, location.lat, location.lon]);
+
+  // Modell-Ausrichtung: worldRoot drehen (Vorzeichen wie box.rotationDeg, 0 = Nord)
+  useEffect(() => {
+    const worldRoot = worldRootRef.current;
+    if (!worldRoot) return;
+    worldRoot.rotation.y = -orientationDeg * Math.PI / 180;
+  }, [orientationDeg]);
+
+  // Swisstopo-Luftbild als Boden (echter Nord-Frame, Scene-Root).
+  useEffect(() => {
+    const ground = groundRef.current;
+    const grid = gridRef.current;
+    if (!ground) return;
+    const mat = ground.material as THREE.MeshStandardMaterial;
+    if (grid) grid.visible = !aerialGround;
+
+    function setGrayGround() {
+      if (mat.map) { mat.map.dispose(); mat.map = null; }
+      mat.color.setHex(0xD8D8D2);
+      mat.needsUpdate = true;
+      ground!.geometry.dispose();
+      ground!.geometry = new THREE.PlaneGeometry(1000, 1000);
+      ground!.position.set(0, 0, 0);
+    }
+
+    if (!aerialGround) {
+      setGrayGround();
+      return;
+    }
+
+    let cancelled = false;
+    buildSwissimageGround({ lat: location.lat, lon: location.lon, extentMeters: 300 })
+      .then((g) => {
+        if (cancelled) return;
+        const tex = new THREE.CanvasTexture(g.canvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const maxAniso = rendererRef.current?.capabilities.getMaxAnisotropy() ?? 1;
+        tex.anisotropy = maxAniso;
+        if (mat.map) mat.map.dispose();
+        mat.map = tex;
+        mat.color.setHex(0xffffff);
+        mat.needsUpdate = true;
+        ground.geometry.dispose();
+        ground.geometry = new THREE.PlaneGeometry(g.widthMeters, g.heightMeters);
+        ground.position.set(g.offsetX, 0, g.offsetZ);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.error('Swissimage-Boden fehlgeschlagen, nutze grauen Default:', e);
+        setGrayGround();
+      });
+    return () => { cancelled = true; };
+  }, [location, aerialGround]);
 
   // Building (Box / Polygon / Upload) synchronisieren
   useEffect(() => {
@@ -708,6 +783,7 @@ export function Scene() {
         samples, dates, scaleFactor,
         lat: state.location.lat, lon: state.location.lon,
         targets,
+        orientationRad: -state.orientationDeg * Math.PI / 180,
         onProgress: (p) => {
           store.getState().setComputeProgress(p);
         },
@@ -856,7 +932,8 @@ function addCompassLabels(scene: THREE.Scene) {
       new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }),
     );
     plane.rotation.x = -Math.PI / 2;
-    plane.position.set(x, 0.03, z);
+    plane.position.set(x, 0.1, z);
+    plane.renderOrder = 2;
     scene.add(plane);
   }
   mkText('N', 0, -180, '#D32F2F');

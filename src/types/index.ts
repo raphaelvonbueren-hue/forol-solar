@@ -144,4 +144,6 @@ export interface Project {
   massings: Massing[];
   dateTime: DateTime;
   osmRadius: number;
+  /** Feste Modell-Ausrichtung in Grad (0 = Nord), optional für Abwärtskompatibilität. */
+  orientationDeg?: number;
 }

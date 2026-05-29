@@ -44,3 +44,14 @@ export function localToGeo(point: LocalPoint, origin: GeoOrigin): { lat: number;
     lon: origin.lon + (dLon * 180) / Math.PI,
   };
 }
+
+/**
+ * Rotiert einen Punkt in der XZ-Ebene um die Y-Achse (Three.js-Konvention).
+ * Entspricht der Welt-Transformation eines lokalen Punktes in einer Group mit
+ * `rotation.y = rad`: x' = x·cos + z·sin, z' = -x·sin + z·cos.
+ */
+export function rotateXZ(x: number, z: number, rad: number): { x: number; z: number } {
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return { x: x * c + z * s, z: -x * s + z * c };
+}

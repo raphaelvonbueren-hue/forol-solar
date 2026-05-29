@@ -6,6 +6,7 @@ import {
 } from 'three-mesh-bvh';
 import type { FacadeSample } from '@/lib/heatmap-compute';
 import { sunPosition } from '@/lib/solar';
+import { rotateXZ } from '@/lib/geo';
 
 /**
  * BVH-Beschleunigung global aktivieren.
@@ -52,6 +53,12 @@ export interface ComputeOptions {
   shouldCancel?: () => boolean;
   /** Yields nach so vielen Samples pro Datum für Browser-Responsiveness. */
   yieldEvery?: number;
+  /**
+   * Feste Modell-Drehung um Y (rad), entspricht worldRoot.rotation.y.
+   * Samples werden damit in den Welt-Frame der gedrehten Gebäude überführt,
+   * während sunDir im echten Azimut bleibt (korrigierende Ausrichtung).
+   */
+  orientationRad?: number;
 }
 
 export class CancellationError extends Error {
@@ -71,7 +78,7 @@ export class CancellationError extends Error {
  */
 export async function computeShadowAnalysis(opts: ComputeOptions): Promise<Float32Array> {
   ensureBVHInstalled();
-  const { samples, dates, scaleFactor, lat, lon, targets, onProgress, shouldCancel } = opts;
+  const { samples, dates, scaleFactor, lat, lon, targets, onProgress, shouldCancel, orientationRad = 0 } = opts;
 
   const raycaster = new THREE.Raycaster();
   raycaster.far = 600;
@@ -89,6 +96,21 @@ export async function computeShadowAnalysis(opts: ComputeOptions): Promise<Float
   const yieldEvery = opts.yieldEvery ?? Math.max(1, Math.floor(dates.length / 80));
   const sunDir = new THREE.Vector3();
   const origin = new THREE.Vector3();
+
+  // Samples einmalig in den Welt-Frame der (ggf. um orientationRad gedrehten)
+  // Gebäude überführen. sunDir bleibt im echten Azimut → Drehung wirkt korrigierend.
+  const wpx = new Float32Array(samples.length);
+  const wpy = new Float32Array(samples.length);
+  const wpz = new Float32Array(samples.length);
+  const wnx = new Float32Array(samples.length);
+  const wnz = new Float32Array(samples.length);
+  for (let i = 0; i < samples.length; i++) {
+    const s = samples[i];
+    const rp = rotateXZ(s.position.x, s.position.z, orientationRad);
+    const rn = rotateXZ(s.normal.x, s.normal.z, orientationRad);
+    wpx[i] = rp.x; wpy[i] = s.position.y; wpz[i] = rp.z;
+    wnx[i] = rn.x; wnz[i] = rn.z;
+  }
 
   for (let di = 0; di < dates.length; di++) {
     const date = dates[di];
@@ -110,10 +132,9 @@ export async function computeShadowAnalysis(opts: ComputeOptions): Promise<Float
     );
 
     for (let si = 0; si < samples.length; si++) {
-      const s = samples[si];
       // Backface-Culling: Sonne muss von vorne kommen
-      if (s.normal.x * sunDir.x + s.normal.z * sunDir.z <= 0) continue;
-      origin.set(s.position.x, s.position.y, s.position.z);
+      if (wnx[si] * sunDir.x + wnz[si] * sunDir.z <= 0) continue;
+      origin.set(wpx[si], wpy[si], wpz[si]);
       raycaster.set(origin, sunDir);
       const hits = raycaster.intersectObjects(meshes, false);
       if (hits.length === 0) results[si] += 1.0;

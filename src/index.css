@@ -179,6 +179,22 @@ html, body, #root {
   font-weight: 500;
 }
 
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--dark);
+  cursor: pointer;
+  margin: 8px 0;
+}
+.checkbox-field input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--forol-red);
+  cursor: pointer;
+}
+
 input[type="text"],
 input[type="number"],
 input[type="date"],
